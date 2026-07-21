@@ -6,6 +6,8 @@ final class RelayEngine
 {
     private IPSModule $module;
 
+    private LCNAdapter $lcn;
+
     private int $relayUp;
 
     private int $relayDown;
@@ -19,9 +21,17 @@ final class RelayEngine
         int $relayDown,
         int $switchPause = 400
     ) {
+
         $this->module = $module;
+
+        $this->lcn = new LCNAdapter(
+            $module
+        );
+
         $this->relayUp = $relayUp;
+
         $this->relayDown = $relayDown;
+
         $this->switchPause = $switchPause;
     }
 
@@ -32,11 +42,16 @@ final class RelayEngine
             return false;
         }
 
-        $this->AllOff();
 
-        usleep($this->switchPause * 1000);
+        $this->Stop();
 
-        return $this->SetRelay(
+
+        usleep(
+            $this->switchPause * 1000
+        );
+
+
+        return $this->lcn->SetOutput(
             $this->relayUp,
             true
         );
@@ -49,11 +64,16 @@ final class RelayEngine
             return false;
         }
 
-        $this->AllOff();
 
-        usleep($this->switchPause * 1000);
+        $this->Stop();
 
-        return $this->SetRelay(
+
+        usleep(
+            $this->switchPause * 1000
+        );
+
+
+        return $this->lcn->SetOutput(
             $this->relayDown,
             true
         );
@@ -62,34 +82,20 @@ final class RelayEngine
 
     public function Stop(): void
     {
-        $this->AllOff();
+        $this->lcn->AllOff(
+            $this->relayUp,
+            $this->relayDown
+        );
     }
 
 
-    public function AllOff(): void
-    {
-        if ($this->relayUp > 0) {
-            $this->SetRelay(
-                $this->relayUp,
-                false
-            );
-        }
-
-        if ($this->relayDown > 0) {
-            $this->SetRelay(
-                $this->relayDown,
-                false
-            );
-        }
-    }
-
-
-    private function Validate(): bool
+    public function Validate(): bool
     {
         if ($this->relayUp <= 0) {
+
             $this->module->SendDebug(
                 'RelayEngine',
-                'AUF Relais nicht konfiguriert',
+                'AUF Relais fehlt',
                 0
             );
 
@@ -98,9 +104,10 @@ final class RelayEngine
 
 
         if ($this->relayDown <= 0) {
+
             $this->module->SendDebug(
                 'RelayEngine',
-                'AB Relais nicht konfiguriert',
+                'AB Relais fehlt',
                 0
             );
 
@@ -112,42 +119,13 @@ final class RelayEngine
 
             $this->module->SendDebug(
                 'RelayEngine',
-                'Fehler: AUF und AB Relais identisch',
+                'AUF und AB Relais identisch',
                 0
             );
 
             return false;
         }
 
-
-        return true;
-    }
-
-
-    private function SetRelay(
-        int $relay,
-        bool $state
-    ): bool {
-
-        $this->module->SendDebug(
-            'RelayEngine',
-            sprintf(
-                'Relais %d -> %s',
-                $relay,
-                $state ? 'EIN' : 'AUS'
-            ),
-            0
-        );
-
-
-        /*
-         * Hier wird später die LCN-Schaltfunktion
-         * eingebunden.
-         *
-         * Die Trennung ist bewusst:
-         * RelayEngine entscheidet Sicherheit,
-         * LCN-Anbindung kommt separat.
-         */
 
         return true;
     }
