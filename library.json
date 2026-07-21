@@ -1,9 +1,12 @@
 {
-    "id": "{6B1E8C92-4D53-4F77-A9C1-2E5F8D6A7340}",
-    "name": "IPSymcon-ScreenLineMB32",
+    "id": "{E3F2A1B4-8D3C-4F61-BF72-91A4C7D5E810}",
+    "name": "ScreenLineMB32",
     "author": "Johannes Veit",
     "url": "https://github.com/johannes-veit/IPSymcon-ScreenLineMB32",
-    "version": "0.1.1",
-    "build": 2,
-    "date": "2026-07-21"
+    "compatibility": {
+        "version": "5.0"
+    },
+    "version": "1.0",
+    "build": 1,
+    "date": 1784652000
 }
