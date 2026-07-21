@@ -5,5 +5,11 @@
     "url": "https://github.com/johannes-veit/IPSymcon-ScreenLineMB32",
     "version": "0.1.0",
     "build": 1,
-    "date": "2026-07-21"
+    "date": "2026-07-21",
+    "modules": [
+        {
+            "id": "{A8D3F6B1-6E5D-4E4E-9B7C-1F2A6D8C3E90}",
+            "name": "ScreenLineMB32Controller"
+        }
+    ]
 }
