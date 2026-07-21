@@ -1,0 +1,14 @@
+{
+    "id": "{7A6F6E1B-6A9D-4E35-9A56-6D3F8E1B2C10}",
+    "name": "ScreenLine MB32 Controller",
+    "type": 3,
+    "vendor": "Johannes Veit",
+    "aliases": [
+        "ScreenLine MB32",
+        "ScreenLine Jalousie Controller"
+    ],
+    "parentRequirements": [],
+    "childRequirements": [],
+    "implemented": [],
+    "prefix": "SLMB32"
+}
