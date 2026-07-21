@@ -1,0 +1,35 @@
+{
+    "translations": {
+        "de": {
+            "ScreenLine MB32 Controller": "ScreenLine MB32 Controller",
+            "Configuration": "Konfiguration",
+            "Settings": "Einstellungen",
+            "Motor": "Motor",
+            "Position": "Position",
+            "Safety": "Sicherheit",
+            "Advanced Settings": "Erweiterte Einstellungen",
+
+            "This module controls a ScreenLine MB32 blind via LCN.": "Dieses Modul steuert eine ScreenLine MB32 Jalousie über LCN.",
+
+            "The module is designed for safe operation.": "Das Modul wurde für einen sicheren Betrieb entwickelt.",
+
+            "Motor Runtime": "Motorlaufzeit",
+            "Time required for a complete movement from top to bottom.": "Zeit, die für eine vollständige Bewegung von oben nach unten benötigt wird.",
+
+            "Up Relay": "Auf-Relais",
+            "Down Relay": "Ab-Relais",
+
+            "Shake-Free": "Shake-Free",
+            "Moves the blind completely once to synchronize the position.": "Bewegt die Lamelle einmal vollständig, um die Position zu synchronisieren.",
+
+            "Strong": "Stark",
+            "Only strong shake-free movement is used.": "Es wird nur die starke vollständige Bewegung verwendet.",
+
+            "Optional Settings": "Optionale Einstellungen",
+            "Show advanced options only when needed.": "Erweiterte Einstellungen werden nur bei Bedarf angezeigt.",
+
+            "Safety limits": "Sicherheitsgrenzen",
+            "Prevent dangerous movements and invalid settings.": "Verhindert gefährliche Bewegungen und ungültige Einstellungen."
+        }
+    }
+}
