@@ -10,12 +10,11 @@ require_once __DIR__ . '/libs/ShakeFree.php';
 
 class ScreenLineMB32Controller extends IPSModule
 {
+
     public function Create()
     {
         parent::Create();
 
-
-        // Relais
 
         $this->RegisterPropertyInteger(
             'RelayUp',
@@ -28,75 +27,22 @@ class ScreenLineMB32Controller extends IPSModule
         );
 
 
-        // Laufzeiten
-
         $this->RegisterPropertyFloat(
             'RuntimeUp',
-            180.0
+            180
         );
 
         $this->RegisterPropertyFloat(
             'RuntimeDown',
-            180.0
+            180
         );
 
-
-        // Sicherheit
 
         $this->RegisterPropertyInteger(
             'SwitchPause',
             400
         );
 
-        $this->RegisterPropertyFloat(
-            'MotorTimeout',
-            190.0
-        );
-
-
-        // Shake Free
-
-        $this->RegisterPropertyBoolean(
-            'ShakeFreeEnabled',
-            true
-        );
-
-        $this->RegisterPropertyFloat(
-            'ShakeFreeDuration',
-            1.5
-        );
-
-
-        $this->RegisterPropertyBoolean(
-            'EnableDiagnostics',
-            false
-        );
-
-
-        // interne Attribute
-
-        $this->RegisterAttributeFloat(
-            'PositionFloat',
-            0.0
-        );
-
-        $this->RegisterAttributeFloat(
-            'SlatFloat',
-            0.0
-        );
-
-        $this->RegisterAttributeInteger(
-            'Direction',
-            0
-        );
-
-        $this->RegisterAttributeBoolean(
-            'Referenced',
-            false
-        );
-
-
-        // Visualisierung
 
         $this->RegisterVariableInteger(
             'Position',
@@ -110,40 +56,20 @@ class ScreenLineMB32Controller extends IPSModule
         );
 
 
-        $this->RegisterVariableInteger(
-            'Lamellen',
-            'Lamellen',
-            '~Intensity.100',
-            20
-        );
-
-        $this->EnableAction(
-            'Lamellen'
-        );
-
-
         $this->RegisterVariableString(
             'Status',
             'Status',
             '',
-            30
+            20
         );
 
 
-        // Timer
-
-        $this->RegisterTimer(
-            'Tracking',
-            1000,
-            'SLMB32_Tracking($_IPS[\'TARGET\']);'
-        );
-
-        $this->RegisterTimer(
-            'Watchdog',
-            1000,
-            'SLMB32_Watchdog($_IPS[\'TARGET\']);'
+        $this->RegisterAttributeFloat(
+            'CurrentPosition',
+            0
         );
     }
+
 
 
     public function ApplyChanges()
@@ -155,47 +81,22 @@ class ScreenLineMB32Controller extends IPSModule
             'Status',
             'Bereit'
         );
-
-
-        $this->ValidateConfiguration();
     }
 
-
-    private function ValidateConfiguration()
-    {
-        if ($this->ReadPropertyInteger('RelayUp') ===
-            $this->ReadPropertyInteger('RelayDown')) {
-
-            $this->SetValue(
-                'Status',
-                'Fehler: Relais identisch'
-            );
-
-            return;
-        }
-    }
 
 
     public function RequestAction(
         $Ident,
         $Value
-    ) {
+    )
+    {
 
         switch ($Ident) {
 
 
             case 'Position':
 
-                $this->MovePosition(
-                    (float)$Value
-                );
-
-                break;
-
-
-            case 'Lamellen':
-
-                $this->MoveLamellen(
+                $this->MoveTo(
                     (float)$Value
                 );
 
@@ -204,48 +105,110 @@ class ScreenLineMB32Controller extends IPSModule
     }
 
 
-    private function MovePosition(
-        float $Value
+
+    private function MoveTo(
+        float $target
     )
     {
-        $this->SendDebug(
+
+        $target = max(
+            0,
+            min(
+                100,
+                $target
+            )
+        );
+
+
+        $current =
+            $this->ReadAttributeFloat(
+                'CurrentPosition'
+            );
+
+
+        if (abs($current - $target) < 0.5) {
+
+            $this->SetValue(
+                'Status',
+                'Position bereits erreicht'
+            );
+
+            return;
+        }
+
+
+
+        $relay = new RelayEngine(
+            $this,
+            $this->ReadPropertyInteger('RelayUp'),
+            $this->ReadPropertyInteger('RelayDown'),
+            $this->ReadPropertyInteger('SwitchPause')
+        );
+
+
+
+        if ($target > $current) {
+
+            $direction = 'AB';
+
+            $runtime =
+                (($target - $current) / 100)
+                *
+                $this->ReadPropertyFloat(
+                    'RuntimeDown'
+                );
+
+
+            $relay->MoveDown();
+
+        } else {
+
+            $direction = 'AUF';
+
+            $runtime =
+                (($current - $target) / 100)
+                *
+                $this->ReadPropertyFloat(
+                    'RuntimeUp'
+                );
+
+
+            $relay->MoveUp();
+        }
+
+
+
+        $this->SetValue(
+            'Status',
+            'Fahrt ' . $direction
+        );
+
+
+
+        IPS_Sleep(
+            (int)($runtime * 1000)
+        );
+
+
+        $relay->Stop();
+
+
+
+        $this->WriteAttributeFloat(
+            'CurrentPosition',
+            $target
+        );
+
+
+        $this->SetValue(
             'Position',
-            (string)$Value,
-            0
+            (int)$target
         );
+
 
         $this->SetValue(
             'Status',
-            'Fahrt vorbereitet'
+            'Position erreicht'
         );
-    }
-
-
-    private function MoveLamellen(
-        float $Value
-    )
-    {
-        $this->SendDebug(
-            'Lamellen',
-            (string)$Value,
-            0
-        );
-
-        $this->SetValue(
-            'Status',
-            'Lamellen vorbereitet'
-        );
-    }
-
-
-    public function Tracking()
-    {
-
-    }
-
-
-    public function Watchdog()
-    {
-
     }
 }
