@@ -6,64 +6,114 @@
         },
         {
             "type": "Label",
-            "caption": "Dieses Modul steuert eine ScreenLine MB32 Jalousie über LCN."
+            "caption": "Schritt für Schritt Einrichtung der ScreenLine MB32 Jalousie."
         },
+
         {
             "type": "ExpansionPanel",
-            "caption": "1. LCN Verbindung",
+            "caption": "1. LCN Relais auswählen",
             "items": [
                 {
-                    "type": "Label",
-                    "caption": "Bitte zuerst die LCN Zuordnung einstellen."
+                    "type": "NumberSpinner",
+                    "name": "RelayUp",
+                    "caption": "Relais AUF",
+                    "minimum": 0,
+                    "maximum": 65535,
+                    "hint": "LCN Ausgang für AUF. Dieser Ausgang schaltet das Finder Koppelrelais für die Aufwärtsbewegung."
                 },
                 {
                     "type": "NumberSpinner",
-                    "name": "ModuleID",
-                    "caption": "LCN Modul ID",
-                    "minimum": 1,
-                    "maximum": 255,
-                    "suffix": "",
-                    "hint": "Die ID des LCN Moduls, an dem die Jalousie angeschlossen ist."
+                    "name": "RelayDown",
+                    "caption": "Relais AB",
+                    "minimum": 0,
+                    "maximum": 65535,
+                    "hint": "LCN Ausgang für AB. Dieser Ausgang schaltet das Finder Koppelrelais für die Abwärtsbewegung."
                 }
             ]
         },
+
         {
             "type": "ExpansionPanel",
-            "caption": "2. Motor und Bewegung",
+            "caption": "2. Motorlaufzeiten einstellen",
             "items": [
                 {
                     "type": "NumberSpinner",
-                    "name": "MotorRuntime",
-                    "caption": "Motorlaufzeit",
-                    "minimum": 1,
-                    "maximum": 300,
+                    "name": "RuntimeUp",
+                    "caption": "Laufzeit AUF",
                     "suffix": " Sekunden",
-                    "hint": "Zeit für eine komplette Bewegung von geschlossen nach offen."
+                    "minimum": 1,
+                    "maximum": 600,
+                    "hint": "Zeit, die der Motor benötigt, um vollständig nach oben zu fahren."
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "RuntimeDown",
+                    "caption": "Laufzeit AB",
+                    "suffix": " Sekunden",
+                    "minimum": 1,
+                    "maximum": 600,
+                    "hint": "Zeit, die der Motor benötigt, um vollständig nach unten zu fahren."
                 }
             ]
         },
+
         {
             "type": "ExpansionPanel",
             "caption": "3. Sicherheit",
             "items": [
                 {
-                    "type": "CheckBox",
-                    "name": "EnableSafety",
-                    "caption": "Sicherheitsüberwachung aktivieren",
-                    "hint": "Verhindert ungültige oder gefährliche Einstellungen."
+                    "type": "NumberSpinner",
+                    "name": "SwitchPause",
+                    "caption": "Umschaltpause",
+                    "suffix": " Millisekunden",
+                    "minimum": 100,
+                    "maximum": 3000,
+                    "hint": "Pause zwischen Auf und Ab. Beide Relais sind während dieser Zeit sicher ausgeschaltet."
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "MotorTimeout",
+                    "caption": "Maximale Fahrzeit",
+                    "suffix": " Sekunden",
+                    "minimum": 10,
+                    "maximum": 900,
+                    "hint": "Sicherheitsabschaltung falls ein Motor unerwartet weiterläuft."
                 }
             ]
         },
+
         {
             "type": "ExpansionPanel",
-            "caption": "4. Erweiterte Einstellungen",
+            "caption": "4. ScreenLine MB32 Funktionen",
+            "items": [
+                {
+                    "type": "CheckBox",
+                    "name": "ShakeFreeEnabled",
+                    "caption": "Shake Free aktivieren",
+                    "hint": "Nach einer Abwärtsfahrt wird die starke Shake-Free Bewegung ausgeführt."
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "ShakeFreeDuration",
+                    "caption": "Shake Free Zeit",
+                    "suffix": " Sekunden",
+                    "minimum": 0.5,
+                    "maximum": 10,
+                    "hint": "Zeit der kurzen Bewegungsphase."
+                }
+            ]
+        },
+
+        {
+            "type": "ExpansionPanel",
+            "caption": "5. Erweiterte Einstellungen",
             "visible": false,
             "items": [
                 {
                     "type": "CheckBox",
-                    "name": "EnableAdvanced",
-                    "caption": "Erweiterte Einstellungen anzeigen",
-                    "hint": "Nur aktivieren, wenn zusätzliche Funktionen benötigt werden."
+                    "name": "EnableDiagnostics",
+                    "caption": "Diagnose aktivieren",
+                    "hint": "Zeigt zusätzliche technische Informationen."
                 }
             ]
         }
