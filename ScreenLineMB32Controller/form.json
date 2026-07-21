@@ -1,0 +1,71 @@
+{
+    "elements": [
+        {
+            "type": "Label",
+            "caption": "ScreenLine MB32 Controller"
+        },
+        {
+            "type": "Label",
+            "caption": "Dieses Modul steuert eine ScreenLine MB32 Jalousie über LCN."
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "1. LCN Verbindung",
+            "items": [
+                {
+                    "type": "Label",
+                    "caption": "Bitte zuerst die LCN Zuordnung einstellen."
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "ModuleID",
+                    "caption": "LCN Modul ID",
+                    "minimum": 1,
+                    "maximum": 255,
+                    "suffix": "",
+                    "hint": "Die ID des LCN Moduls, an dem die Jalousie angeschlossen ist."
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "2. Motor und Bewegung",
+            "items": [
+                {
+                    "type": "NumberSpinner",
+                    "name": "MotorRuntime",
+                    "caption": "Motorlaufzeit",
+                    "minimum": 1,
+                    "maximum": 300,
+                    "suffix": " Sekunden",
+                    "hint": "Zeit für eine komplette Bewegung von geschlossen nach offen."
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "3. Sicherheit",
+            "items": [
+                {
+                    "type": "CheckBox",
+                    "name": "EnableSafety",
+                    "caption": "Sicherheitsüberwachung aktivieren",
+                    "hint": "Verhindert ungültige oder gefährliche Einstellungen."
+                }
+            ]
+        },
+        {
+            "type": "ExpansionPanel",
+            "caption": "4. Erweiterte Einstellungen",
+            "visible": false,
+            "items": [
+                {
+                    "type": "CheckBox",
+                    "name": "EnableAdvanced",
+                    "caption": "Erweiterte Einstellungen anzeigen",
+                    "hint": "Nur aktivieren, wenn zusätzliche Funktionen benötigt werden."
+                }
+            ]
+        }
+    ]
+}
