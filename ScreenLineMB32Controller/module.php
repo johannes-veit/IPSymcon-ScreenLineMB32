@@ -15,9 +15,7 @@ class ScreenLineMB32Controller extends IPSModule
         parent::Create();
 
 
-        /*
-         * Hardware
-         */
+        // Relais
 
         $this->RegisterPropertyInteger(
             'RelayUp',
@@ -30,9 +28,7 @@ class ScreenLineMB32Controller extends IPSModule
         );
 
 
-        /*
-         * Motorlaufzeiten
-         */
+        // Laufzeiten
 
         $this->RegisterPropertyFloat(
             'RuntimeUp',
@@ -45,9 +41,7 @@ class ScreenLineMB32Controller extends IPSModule
         );
 
 
-        /*
-         * Sicherheit
-         */
+        // Sicherheit
 
         $this->RegisterPropertyInteger(
             'SwitchPause',
@@ -60,9 +54,7 @@ class ScreenLineMB32Controller extends IPSModule
         );
 
 
-        /*
-         * Shake Free
-         */
+        // Shake Free
 
         $this->RegisterPropertyBoolean(
             'ShakeFreeEnabled',
@@ -75,46 +67,58 @@ class ScreenLineMB32Controller extends IPSModule
         );
 
 
-        /*
-         * interne Werte
-         */
+        $this->RegisterPropertyBoolean(
+            'EnableDiagnostics',
+            false
+        );
+
+
+        // interne Attribute
 
         $this->RegisterAttributeFloat(
-            'Position',
+            'PositionFloat',
             0.0
         );
 
         $this->RegisterAttributeFloat(
-            'Lamellen',
+            'SlatFloat',
             0.0
         );
 
+        $this->RegisterAttributeInteger(
+            'Direction',
+            0
+        );
 
-        /*
-         * Visualisierung
-         */
+        $this->RegisterAttributeBoolean(
+            'Referenced',
+            false
+        );
+
+
+        // Visualisierung
 
         $this->RegisterVariableInteger(
-            'BlindControl',
+            'Position',
             'Position',
             '~Intensity.100',
             10
         );
 
         $this->EnableAction(
-            'BlindControl'
+            'Position'
         );
 
 
         $this->RegisterVariableInteger(
-            'SlatPosition',
+            'Lamellen',
             'Lamellen',
             '~Intensity.100',
             20
         );
 
         $this->EnableAction(
-            'SlatPosition'
+            'Lamellen'
         );
 
 
@@ -123,6 +127,21 @@ class ScreenLineMB32Controller extends IPSModule
             'Status',
             '',
             30
+        );
+
+
+        // Timer
+
+        $this->RegisterTimer(
+            'Tracking',
+            1000,
+            'SLMB32_Tracking($_IPS[\'TARGET\']);'
+        );
+
+        $this->RegisterTimer(
+            'Watchdog',
+            1000,
+            'SLMB32_Watchdog($_IPS[\'TARGET\']);'
         );
     }
 
@@ -136,6 +155,24 @@ class ScreenLineMB32Controller extends IPSModule
             'Status',
             'Bereit'
         );
+
+
+        $this->ValidateConfiguration();
+    }
+
+
+    private function ValidateConfiguration()
+    {
+        if ($this->ReadPropertyInteger('RelayUp') ===
+            $this->ReadPropertyInteger('RelayDown')) {
+
+            $this->SetValue(
+                'Status',
+                'Fehler: Relais identisch'
+            );
+
+            return;
+        }
     }
 
 
@@ -147,18 +184,18 @@ class ScreenLineMB32Controller extends IPSModule
         switch ($Ident) {
 
 
-            case 'BlindControl':
+            case 'Position':
 
-                $this->MoveToPosition(
+                $this->MovePosition(
                     (float)$Value
                 );
 
                 break;
 
 
-            case 'SlatPosition':
+            case 'Lamellen':
 
-                $this->MoveSlats(
+                $this->MoveLamellen(
                     (float)$Value
                 );
 
@@ -167,16 +204,15 @@ class ScreenLineMB32Controller extends IPSModule
     }
 
 
-    private function MoveToPosition(
-        float $position
-    ): void {
-
+    private function MovePosition(
+        float $Value
+    )
+    {
         $this->SendDebug(
-            'ScreenLine',
-            'Zielposition: ' . $position,
+            'Position',
+            (string)$Value,
             0
         );
-
 
         $this->SetValue(
             'Status',
@@ -185,20 +221,31 @@ class ScreenLineMB32Controller extends IPSModule
     }
 
 
-    private function MoveSlats(
-        float $position
-    ): void {
-
+    private function MoveLamellen(
+        float $Value
+    )
+    {
         $this->SendDebug(
-            'ScreenLine',
-            'Lamellenziel: ' . $position,
+            'Lamellen',
+            (string)$Value,
             0
         );
 
-
         $this->SetValue(
             'Status',
-            'Lamellenfahrt vorbereitet'
+            'Lamellen vorbereitet'
         );
+    }
+
+
+    public function Tracking()
+    {
+
+    }
+
+
+    public function Watchdog()
+    {
+
     }
 }
