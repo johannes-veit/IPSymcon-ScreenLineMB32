@@ -1,9 +1,8 @@
 {
-    "id": "{A8D3F6B1-6E5D-4E4E-9B7C-1F2A6D8C3E90}",
+    "id": "{9D7A1F2C-4B6E-45D8-8F91-123456789ABC}",
     "name": "ScreenLineMB32Controller",
     "type": 3,
     "vendor": "ScreenLine",
-    "library": "{E3F2A1B4-8D3C-4F61-BF72-91A4C7D5E810}",
     "aliases": [
         "ScreenLine MB32 Controller"
     ],
