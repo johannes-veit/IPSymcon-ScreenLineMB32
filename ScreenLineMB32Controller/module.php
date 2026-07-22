@@ -34,7 +34,7 @@ class ScreenLineMB32Controller extends IPSModule
         $this->RegisterVariableInteger('Position', 'Position', '~Intensity.100', 10);
         $this->EnableAction('Position');
 
-        // Direktes Zuweisen des nativen IP-Symcon Profils (Sonderzeichen-Fehler behoben)
+        // KORREKTUR: Direkte Zuweisung des nativen IP-Symcon Profils ohne fehlerhafte Erstellungsprüfung
         $this->RegisterVariableInteger('SlatPosition', 'Lamelle', '~SlatPosition', 15);
         $this->EnableAction('SlatPosition');
         
