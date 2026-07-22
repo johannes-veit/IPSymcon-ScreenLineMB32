@@ -34,14 +34,13 @@ class ScreenLineMB32Controller extends IPSModule
         $this->RegisterVariableInteger('Position', 'Position', '~Intensity.100', 10);
         $this->EnableAction('Position');
 
-        // KORREKTUR: Eigenes Profil ohne Tilde anlegen, falls es fehlt
+        // Eigenes Profil ohne Tilde anlegen, falls es fehlt
         if (!IPS_VariableProfileExists('SlatPosition')) {
-            IPS_CreateVariableProfile('SlatPosition', 1); // 1 = Integer
+            IPS_CreateVariableProfile('SlatPosition', 1);
             IPS_SetVariableProfileValues('SlatPosition', 0, 100, 1);
             IPS_SetVariableProfileText('SlatPosition', '%', ' %');
         }
 
-        // KORREKTUR: Zuweisung des sauberen Profils ohne Tilde (Fehler in Zeile 38 behoben!)
         $this->RegisterVariableInteger('SlatPosition', 'Lamelle', 'SlatPosition', 15);
         $this->EnableAction('SlatPosition');
         
@@ -51,6 +50,7 @@ class ScreenLineMB32Controller extends IPSModule
         $this->RegisterAttributeFloat('CurrentPosition', 0.0);
         $this->RegisterAttributeFloat('TargetPosition', 0.0);
         $this->RegisterAttributeFloat('CurrentSlatPosition', 0.0);
+        $this->RegisterAttributeFloat('TargetSlatPosition', 0.0);
         $this->RegisterAttributeFloat('LastTimestamp', 0.0);
         $this->RegisterAttributeInteger('CurrentDirection', 0); 
         $this->RegisterAttributeInteger('ShakeFreeStep', 0);    
@@ -59,6 +59,7 @@ class ScreenLineMB32Controller extends IPSModule
         $this->RegisterAttributeFloat('RemainingSlatTime', 0.0);
         $this->RegisterAttributeFloat('RemainingSoftStartTime', 0.0);
         $this->RegisterAttributeFloat('OverrunRemainingTime', 0.0);
+        $this->RegisterAttributeBoolean('IsSlatOnlyMove', false);
         
         // Attribute zur Stillstands-Überwachung für den Standby-Modus
         $this->RegisterAttributeFloat('LastLoggedPosition', -1.0);
@@ -69,8 +70,8 @@ class ScreenLineMB32Controller extends IPSModule
         $this->RegisterAttributeFloat('IntermediateShakeRemaining', 0.0);
         $this->RegisterAttributeInteger('OriginalDirection', 0);
 
-        // Timer registrieren
-        $this->RegisterTimer('MovementTimer', 0, 'SLMB32_UpdateMovement($_IPS[\'TARGET\']);');
+        // KORREKTUR: Systemkonformer Timer-Aufruf über IPS_RequestAction anstatt des alten, ungültigen Präfixes
+        $this->RegisterTimer('MovementTimer', 0, 'IPS_RequestAction($_IPS[\'TARGET\'], "UpdateMovement", 0);');
     }
 
     public function ApplyChanges(): void
@@ -85,11 +86,14 @@ class ScreenLineMB32Controller extends IPSModule
     {
         $this->SendDebug('RequestAction', sprintf('Ident=%s Value=%s', (string)$Ident, (string)$Value), 0);
 
-        if ($Ident !== 'Position') {
-            return;
+        // KORREKTUR: RequestAction verarbeitet nun BEIDE Regler (Höhe und Lamelle) aus der Visu
+        if ($Ident === 'Position') {
+            $this->MoveTo((float)$Value);
+        } elseif ($Ident === 'SlatPosition') {
+            $this->MoveSlatTo((float)$Value);
+        } elseif ($Ident === 'UpdateMovement') {
+            $this->UpdateMovement();
         }
-
-        $this->MoveTo((float)$Value);
     }
 
     public function MoveTo(float $target): void
@@ -189,6 +193,7 @@ class ScreenLineMB32Controller extends IPSModule
         $this->WriteAttributeFloat('RemainingSlatTime', $slatTime);
         $this->WriteAttributeFloat('RemainingSoftStartTime', $softTime);
         $this->WriteAttributeFloat('OverrunRemainingTime', $overrunTime);
+        $this->WriteAttributeBoolean('IsSlatOnlyMove', false);
         
         $this->WriteAttributeFloat('LastLoggedPosition', $current);
         $this->WriteAttributeFloat('StaticPositionDuration', 0.0);
@@ -201,6 +206,52 @@ class ScreenLineMB32Controller extends IPSModule
         $this->SetTimerInterval('MovementTimer', 500);
         $this->SetValue('Status', 'Anlauf...');
     }
+    public function MoveSlatTo(float $targetSlat): void
+    {
+        $this->SendDebug('MoveSlatTo', 'Ziel Lamelle=' . $targetSlat, 0);
+        $currentSlat = $this->ReadAttributeFloat('CurrentSlatPosition');
+        $currentPos = $this->ReadAttributeFloat('CurrentPosition');
+
+        if ($targetSlat < 0.0 || $targetSlat > 100.0 || $currentSlat === $targetSlat) {
+            return;
+        }
+
+        $relayUp = $this->ReadPropertyInteger('RelayUp');
+        $relayDown = $this->ReadPropertyInteger('RelayDown');
+        if ($relayUp <= 0 || $relayDown <= 0 || !IPS_InstanceExists($relayUp) || !IPS_InstanceExists($relayDown)) {
+            return;
+        }
+
+        $direction = ($targetSlat > $currentSlat) ? TrackingEngine::DIRECTION_DOWN : TrackingEngine::DIRECTION_UP;
+        
+        $slatDiff = abs($targetSlat - $currentSlat) / 100.0;
+        $slatTime = $slatDiff * $this->ReadPropertyFloat('SlatTurnTime');
+        $softTime = $this->ReadPropertyFloat('SoftStartTime');
+        $totalRuntime = $slatTime + $softTime;
+
+        $relay = new RelayEngine($this, $relayUp, $relayDown, $this->ReadPropertyInteger('SwitchPause'));
+        $movement = new MovementEngine($this, $relay);
+
+        if (!$movement->Start($currentPos, $currentPos, $totalRuntime)) {
+            return;
+        }
+
+        $this->WriteAttributeInteger('CurrentDirection', $direction);
+        $this->WriteAttributeFloat('TargetSlatPosition', $targetSlat);
+        $this->WriteAttributeFloat('LastTimestamp', microtime(true));
+        $this->WriteAttributeFloat('RemainingSlatTime', $slatTime);
+        $this->WriteAttributeFloat('RemainingSoftStartTime', $softTime);
+        $this->WriteAttributeBoolean('IsSlatOnlyMove', true);
+
+        $safety = new SafetyEngine($this, $totalRuntime + 5.0);
+        $safetyStartTime = $safety->Start();
+        $this->WriteAttributeFloat('SafetyStartTime', $safetyStartTime);
+        $this->WriteAttributeBoolean('SafetyRunning', true);
+
+        $this->SetTimerInterval('MovementTimer', 500);
+        $this->SetValue('Status', 'Lamelle dreht...');
+    }
+
     public function TriggerIntermediateShake(): void
     {
         $relayUp = $this->ReadPropertyInteger('RelayUp');
@@ -241,12 +292,14 @@ class ScreenLineMB32Controller extends IPSModule
 
         $direction = $this->ReadAttributeInteger('CurrentDirection');
         $target = $this->ReadAttributeFloat('TargetPosition');
+        $targetSlat = $this->ReadAttributeFloat('TargetSlatPosition');
         $current = $this->ReadAttributeFloat('CurrentPosition');
         $currentSlat = $this->ReadAttributeFloat('CurrentSlatPosition');
         $lastTimestamp = $this->ReadAttributeFloat('LastTimestamp');
         $remSlat = $this->ReadAttributeFloat('RemainingSlatTime');
         $remSoft = $this->ReadAttributeFloat('RemainingSoftStartTime');
         $overrun = $this->ReadAttributeFloat('OverrunRemainingTime');
+        $isSlatOnly = $this->ReadAttributeBoolean('IsSlatOnlyMove');
         
         $lastLoggedPos = $this->ReadAttributeFloat('LastLoggedPosition');
         $staticDuration = $this->ReadAttributeFloat('StaticPositionDuration');
@@ -319,7 +372,7 @@ class ScreenLineMB32Controller extends IPSModule
         $isAtEndstop = ($target === 100.0 && $current >= 100.0) || ($target === 0.0 && $current <= 0.0);
         $isOverrunPhaseActive = false;
 
-        if ($isAtEndstop && $overrun > 0.0) {
+        if ($isAtEndstop && $overrun > 0.0 && !$isSlatOnly) {
             $isOverrunPhaseActive = true;
             if ($elapsed >= $overrun) {
                 $overrun = 0.0;
@@ -332,25 +385,41 @@ class ScreenLineMB32Controller extends IPSModule
         } else {
             $tracking = new TrackingEngine($this, $this->ReadPropertyFloat('RuntimeUp'), $this->ReadPropertyFloat('RuntimeDown'), $remSlat, $remSoft);
             $tracking->Rehydrate($current, $currentSlat, $lastTimestamp, $remSlat, $remSoft);
-            $tracking->Move($direction);
             
-            $newPos = $tracking->GetPosition();
-            $newSlat = $tracking->GetSlatPosition();
+            // Erweiterter Fahrbefehl (Berücksichtigt reine Lamellenänderungen)
+            if ($isSlatOnly) {
+                if ($remSoft <= 0.0 && $remSlat > 0.0) {
+                    $allocatedTime = min($elapsed, $remSlat);
+                    $remSlat -= $allocatedTime;
+                    $totalSlatTime = max(0.1, (float)$this->ReadPropertyFloat('SlatTurnTime'));
+                    $slatDelta = ($allocatedTime / $totalSlatTime) * 100.0;
+                    $currentSlat = ($direction === TrackingEngine::DIRECTION_DOWN) ? ($currentSlat + $slatDelta) : ($currentSlat - $slatDelta);
+                }
+                if ($remSoft > 0.0) {
+                    $remSoft = max(0.0, $remSoft - $elapsed);
+                }
+                $newPos = $current;
+                $newSlat = min(100.0, max(0.0, $currentSlat));
+            } else {
+                $tracking->Move($direction);
+                $newPos = $tracking->GetPosition();
+                $newSlat = $tracking->GetSlatPosition();
+            }
             
             $this->WriteAttributeFloat('CurrentPosition', $newPos);
             $this->WriteAttributeFloat('CurrentSlatPosition', $newSlat); 
             $this->WriteAttributeFloat('LastTimestamp', microtime(true));
-            $this->WriteAttributeFloat('RemainingSlatTime', $tracking->GetRemainingSlatTime());
-            $this->WriteAttributeFloat('RemainingSoftStartTime', $tracking->GetRemainingSoftStartTime());
+            $this->WriteAttributeFloat('RemainingSlatTime', $remSlat);
+            $this->WriteAttributeFloat('RemainingSoftStartTime', $remSoft);
             
             $this->SetValue('Position', (int)$newPos);
             $this->SetValue('SlatPosition', (int)$newSlat); 
             $current = $newPos;
         }
 
-        $isFahrtAktiv = ($remSoft > 0.0 || $remSlat > 0.0 || (!$isAtEndstop && abs($current - $target) > 0.5));
+        $isFahrtAktiv = ($remSoft > 0.0 || $remSlat > 0.0 || (!$isAtEndstop && !$isSlatOnly && abs($current - $target) > 0.5));
 
-        if (!$isFahrtAktiv && (abs($current - $lastLoggedPos) < 0.01 || $isOverrunPhaseActive)) {
+        if (!$isFahrtAktiv && (abs($current - $lastLoggedPos) < 0.01 || $isOverrunPhaseActive || $isSlatOnly)) {
             $staticDuration += $elapsed;
         } else {
             $staticDuration = 0.0; 
@@ -366,14 +435,14 @@ class ScreenLineMB32Controller extends IPSModule
             $this->WriteAttributeInteger('CurrentDirection', 0);
             $this->WriteAttributeInteger('ShakeFreeStep', 0);
             
-            if ($this->ReadPropertyBoolean('IntermediateShakeEnabled') && !$isAtEndstop) {
+            if ($this->ReadPropertyBoolean('IntermediateShakeEnabled') && !$isAtEndstop && !$isSlatOnly) {
                 $this->TriggerIntermediateShake();
                 return;
             }
 
-            if ($target === 100.0 || $current >= 99.5) {
+            if (!$isSlatOnly && ($target === 100.0 || $current >= 99.5)) {
                 $this->ReferenceClosed();
-            } elseif ($target === 0.0 || $current <= 0.5) {
+            } elseif (!$isSlatOnly && ($target === 0.0 || $current <= 0.5)) {
                 $this->WriteAttributeFloat('CurrentPosition', 0.0);
                 $this->WriteAttributeFloat('CurrentSlatPosition', 0.0);
                 $this->SetValue('Position', 0);
@@ -389,15 +458,26 @@ class ScreenLineMB32Controller extends IPSModule
             $this->SetValue('Status', 'Sanftanlauf...');
         } elseif ($remSlat > 0.0) {
             $this->SetValue('Status', 'Lamellenwendung...');
-        } elseif ($overrun > 0.0) {
+        } elseif ($overrun > 0.0 && !$isSlatOnly) {
             $this->SetValue('Status', 'Nachlauf aktiv...');
         } else {
             $this->SetValue('Status', 'Fahrt läuft');
         }
 
-        if ((abs($current - $target) <= 0.5 && $overrun <= 0.0) || ($direction === TrackingEngine::DIRECTION_UP && $current <= 0.0 && $overrun <= 0.0) || ($direction === TrackingEngine::DIRECTION_DOWN && $current >= 100.0 && $overrun <= 0.0)) {
-            
-            if ($this->ReadPropertyBoolean('IntermediateShakeEnabled') && !$isAtEndstop) {
+        // Zielprüfung für Behangfahrt ODER Beendigung der reinen Lamellenfahrt
+        $isTargetReached = false;
+        if ($isSlatOnly) {
+            if ($remSlat <= 0.0 && $remSoft <= 0.0) {
+                $isTargetReached = true;
+            }
+        } else {
+            if ((abs($current - $target) <= 0.5 && $overrun <= 0.0) || ($direction === TrackingEngine::DIRECTION_UP && $current <= 0.0 && $overrun <= 0.0) || ($direction === TrackingEngine::DIRECTION_DOWN && $current >= 100.0 && $overrun <= 0.0)) {
+                $isTargetReached = true;
+            }
+        }
+
+        if ($isTargetReached) {
+            if ($this->ReadPropertyBoolean('IntermediateShakeEnabled') && !$isAtEndstop && !$isSlatOnly) {
                 $this->TriggerIntermediateShake();
                 return;
             }
@@ -405,31 +485,39 @@ class ScreenLineMB32Controller extends IPSModule
             $relay->Stop();
             $this->WriteAttributeBoolean('SafetyRunning', false);
             
-            if ($target === 100.0) {
-                $this->ReferenceClosed();
-            } elseif ($target === 0.0) {
-                $this->WriteAttributeFloat('CurrentPosition', 0.0);
-                $this->WriteAttributeFloat('CurrentSlatPosition', 0.0);
-                $this->SetValue('Position', 0);
-                $this->SetValue('SlatPosition', 0);
+            if ($isSlatOnly) {
+                $this->WriteAttributeFloat('CurrentSlatPosition', $targetSlat);
+                $this->SetValue('SlatPosition', (int)$targetSlat);
                 $this->SetTimerInterval('MovementTimer', 0);
                 $this->WriteAttributeInteger('CurrentDirection', 0);
-                $this->SetValue('Status', 'Referenz geöffnet gespeichert (0%)');
+                $this->SetValue('Status', 'Lamelle eingestellt');
             } else {
-                $this->WriteAttributeFloat('CurrentPosition', $target);
-                $this->SetValue('Position', (int)$target);
-                $finalSlat = ($direction === TrackingEngine::DIRECTION_DOWN) ? 100.0 : 0.0;
-                $this->WriteAttributeFloat('CurrentSlatPosition', $finalSlat);
-                $this->SetValue('SlatPosition', (int)$finalSlat);
-                
-                $this->SetTimerInterval('MovementTimer', 0);
-                $this->WriteAttributeInteger('CurrentDirection', 0);
-                $this->SetValue('Status', 'Position erreicht');
-            }
+                if ($target === 100.0) {
+                    $this->ReferenceClosed();
+                } elseif ($target === 0.0) {
+                    $this->WriteAttributeFloat('CurrentPosition', 0.0);
+                    $this->WriteAttributeFloat('CurrentSlatPosition', 0.0);
+                    $this->SetValue('Position', 0);
+                    $this->SetValue('SlatPosition', 0);
+                    $this->SetTimerInterval('MovementTimer', 0);
+                    $this->WriteAttributeInteger('CurrentDirection', 0);
+                    $this->SetValue('Status', 'Referenz geöffnet gespeichert (0%)');
+                } else {
+                    $this->WriteAttributeFloat('CurrentPosition', $target);
+                    $this->SetValue('Position', (int)$target);
+                    $finalSlat = ($direction === TrackingEngine::DIRECTION_DOWN) ? 100.0 : 0.0;
+                    $this->WriteAttributeFloat('CurrentSlatPosition', $finalSlat);
+                    $this->SetValue('SlatPosition', (int)$finalSlat);
+                    
+                    $this->SetTimerInterval('MovementTimer', 0);
+                    $this->WriteAttributeInteger('CurrentDirection', 0);
+                    $this->SetValue('Status', 'Position erreicht');
+                }
 
-            $coldStep = $this->ReadAttributeInteger('ShakeFreeStep');
-            if ($target === 100.0 && $coldStep > 0) {
-                $this->AdvanceShakeFreeSequence(100.0); 
+                $coldStep = $this->ReadAttributeInteger('ShakeFreeStep');
+                if ($target === 100.0 && $coldStep > 0) {
+                    $this->AdvanceShakeFreeSequence(100.0); 
+                }
             }
         }
     }
