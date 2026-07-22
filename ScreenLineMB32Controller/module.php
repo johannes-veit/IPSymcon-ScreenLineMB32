@@ -89,24 +89,60 @@ class ScreenLineMB32Controller extends IPSModule
         $Value
     )
     {
-        if ($Ident === 'Position') {
+        $this->SendDebug(
+            'RequestAction',
+            sprintf(
+                'Ident=%s Value=%s',
+                (string)$Ident,
+                (string)$Value
+            ),
+            0
+        );
 
-            $this->MoveTo(
-                (float)$Value
-            );
+        if ($Ident !== 'Position') {
+            return;
         }
+
+        $this->SendDebug(
+            'RequestAction',
+            'MoveTo() wird aufgerufen',
+            0
+        );
+
+        $this->MoveTo(
+            (float)$Value
+        );
     }
 
     private function MoveTo(
         float $target
     ): void {
 
+        $this->SendDebug(
+            'MoveTo',
+            'Ziel=' . $target,
+            0
+        );
+
         $current =
             $this->ReadAttributeFloat(
                 'CurrentPosition'
             );
 
+        $this->SendDebug(
+            'MoveTo',
+            'Aktuelle Position=' . $current,
+            0
+        );
+
         if ($target < 0 || $target > 100) {
+
+            $this->SendDebug(
+                'MoveTo',
+                'Ungültiges Ziel',
+                0
+            );
+
             return;
         }
 
@@ -148,6 +184,11 @@ class ScreenLineMB32Controller extends IPSModule
                 );
         }
 
+        $this->SendDebug(
+            'MoveTo',
+            'Runtime=' . $runtime,
+            0
+        );
         if (
             !$this->movement->Start(
                 $current,
@@ -155,8 +196,21 @@ class ScreenLineMB32Controller extends IPSModule
                 $runtime
             )
         ) {
+
+            $this->SendDebug(
+                'MoveTo',
+                'MovementEngine->Start() liefert FALSE',
+                0
+            );
+
             return;
         }
+
+        $this->SendDebug(
+            'MoveTo',
+            'MovementEngine gestartet',
+            0
+        );
 
         $this->SetTimerInterval(
             'MovementTimer',
@@ -172,6 +226,13 @@ class ScreenLineMB32Controller extends IPSModule
     public function UpdateMovement(): void
     {
         if ($this->movement === null) {
+
+            $this->SendDebug(
+                'Timer',
+                'MovementEngine ist NULL',
+                0
+            );
+
             return;
         }
 
@@ -194,10 +255,26 @@ class ScreenLineMB32Controller extends IPSModule
             (int)$position
         );
 
+        $this->SendDebug(
+            'Timer',
+            sprintf(
+                't=%.1f  Pos=%.1f',
+                $elapsed,
+                $position
+            ),
+            0
+        );
+
         if (
             $elapsed >=
             $this->movement->GetRuntime()
         ) {
+
+            $this->SendDebug(
+                'Timer',
+                'Ziel erreicht',
+                0
+            );
 
             $this->movement->Stop();
 
