@@ -58,7 +58,6 @@ final class TrackingEngine
         $elapsed = $now - $this->lastTimestamp;
         $this->lastTimestamp = $now;
 
-        // Phase 1: Sanftanlauf abarbeiten (Trägt immer und zuerst ab)
         if ($this->remainingSoftStartTime > 0.0) {
             if ($elapsed >= $this->remainingSoftStartTime) {
                 $elapsed -= $this->remainingSoftStartTime;
@@ -71,7 +70,6 @@ final class TrackingEngine
             }
         }
 
-        // Phase 2: Lamellenwendung abarbeiten (Nur bei Richtungswechsel)
         if ($this->remainingSlatTime > 0.0) {
             if ($elapsed >= $this->remainingSlatTime) {
                 $elapsed -= $this->remainingSlatTime;
@@ -84,7 +82,6 @@ final class TrackingEngine
             }
         }
 
-        // Phase 3: Reine Behangbewegung berechnen
         switch ($direction) {
             case self::DIRECTION_UP:
                 $this->position -= ($elapsed / $this->runtimeUp) * 100.0;
@@ -100,7 +97,7 @@ final class TrackingEngine
         IPS_SendDebug(
             $this->module->GetModuleInstanceID(),
             'TrackingEngine',
-            sprintf('Fahrt aktiv | Delta=%.3fs | Position=%.2f %%', $elapsed, $this->position),
+            sprintf('Fahrt active | Delta=%.3fs | Position=%.2f %%', $elapsed, $this->position),
             0
         );
     }
