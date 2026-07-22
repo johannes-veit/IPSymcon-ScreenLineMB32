@@ -59,7 +59,8 @@ final class TrackingEngine
 
         $this->position = $this->Clamp($this->position);
 
-        $this->module->SendDebug(
+        IPS_SendDebug(
+            $this->module->GetModuleInstanceID(),
             'TrackingEngine',
             sprintf('Delta=%.3fs | Position=%.2f %%', $elapsed, $this->position),
             0
@@ -85,7 +86,14 @@ final class TrackingEngine
     public function ReferenceClosed(): void
     {
         $this->position = 0.0;
-        $this->module->SendDebug('TrackingEngine', 'Referenz geschlossen gespeichert', 0);
+        
+        // KORREKTUR: Umstellung auf das globale IPS_SendDebug
+        IPS_SendDebug(
+            $this->module->GetModuleInstanceID(),
+            'TrackingEngine',
+            'Referenz geschlossen gespeichert',
+            0
+        );
     }
 
     private function Clamp(float $value): float 
