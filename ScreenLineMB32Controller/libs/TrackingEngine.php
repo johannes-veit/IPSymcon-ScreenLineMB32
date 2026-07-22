@@ -10,6 +10,8 @@ final class TrackingEngine
     private float $remainingSlatTime = 0.0;
     private float $remainingSoftStartTime = 0.0;
     private float $position = 0.0;
+    private float $slatPosition = 0.0;
+    private float $startPositionForAutoRef = -1.0; 
     private float $lastTimestamp = 0.0;
 
     public const DIRECTION_UP = 1;
@@ -24,9 +26,10 @@ final class TrackingEngine
         $this->remainingSoftStartTime = max(0.0, $softTime);
     }
 
-    public function Rehydrate(float $position, float $lastTimestamp, float $remSlat, float $remSoft): void
+    public function Rehydrate(float $position, float $slatPosition, float $lastTimestamp, float $remSlat, float $remSoft): void
     {
         $this->position = $this->Clamp($position);
+        $this->slatPosition = $this->Clamp($slatPosition);
         $this->lastTimestamp = $lastTimestamp;
         $this->remainingSlatTime = max(0.0, $remSlat);
         $this->remainingSoftStartTime = max(0.0, $remSoft);
@@ -35,6 +38,11 @@ final class TrackingEngine
     public function GetPosition(): float
     {
         return $this->position;
+    }
+
+    public function GetSlatPosition(): float
+    {
+        return $this->slatPosition;
     }
 
     public function GetRemainingSlatTime(): float
@@ -58,46 +66,62 @@ final class TrackingEngine
         $elapsed = $now - $this->lastTimestamp;
         $this->lastTimestamp = $now;
 
+        // 1. Sanftanlauf abziehen
         if ($this->remainingSoftStartTime > 0.0) {
             if ($elapsed >= $this->remainingSoftStartTime) {
                 $elapsed -= $this->remainingSoftStartTime;
                 $this->remainingSoftStartTime = 0.0;
-                IPS_SendDebug($this->module->GetModuleInstanceID(), 'TrackingEngine', 'Sanftanlauf beendet.', 0);
             } else {
                 $this->remainingSoftStartTime -= $elapsed;
-                IPS_SendDebug($this->module->GetModuleInstanceID(), 'TrackingEngine', sprintf('In Sanftanlauf-Phase: Noch %.2fs verbleibend', $this->remainingSoftStartTime), 0);
                 return; 
             }
         }
 
+        // 2. Lamellenwendung berechnen
         if ($this->remainingSlatTime > 0.0) {
-            if ($elapsed >= $this->remainingSlatTime) {
-                $elapsed -= $this->remainingSlatTime;
-                $this->remainingSlatTime = 0.0;
-                IPS_SendDebug($this->module->GetModuleInstanceID(), 'TrackingEngine', 'Lamellenwendung beendet. Behangpaket verfährt jetzt.', 0);
+            $allocatedTime = min($elapsed, $this->remainingSlatTime);
+            $this->remainingSlatTime -= $allocatedTime;
+            $elapsed -= $allocatedTime;
+
+            $totalSlatTime = max(0.1, (float)$this->module->ReadPropertyFloat('SlatTurnTime'));
+            $slatDelta = ($allocatedTime / $totalSlatTime) * 100.0;
+
+            if ($direction === self::DIRECTION_DOWN) {
+                $this->slatPosition += $slatDelta;
             } else {
-                $this->remainingSlatTime -= $elapsed;
-                IPS_SendDebug($this->module->GetModuleInstanceID(), 'TrackingEngine', sprintf('In Lamellenwende-Phase: Noch %.2fs verbleibend', $this->remainingSlatTime), 0);
-                return;
+                $this->slatPosition -= $slatDelta;
             }
+            $this->slatPosition = $this->Clamp($this->slatPosition);
         }
 
-        switch ($direction) {
-            case self::DIRECTION_UP:
-                $this->position -= ($elapsed / $this->runtimeUp) * 100.0;
-                break;
+        // 3. Physische Behangfahrt (Auto-Referenzierung bei fortlaufender Fahrt)
+        if ($elapsed > 0.0) {
+            if ($this->startPositionForAutoRef < 0.0) {
+                $this->startPositionForAutoRef = $this->position;
+            }
 
-            case self::DIRECTION_DOWN:
-                $this->position += ($elapsed / $this->runtimeDown) * 100.0;
-                break;
+            switch ($direction) {
+                case self::DIRECTION_UP:
+                    $this->position -= ($elapsed / $this->runtimeUp) * 100.0;
+                    if (abs($this->startPositionForAutoRef - $this->position) >= 5.0) {
+                        $this->slatPosition = 0.0; 
+                    }
+                    break;
+
+                case self::DIRECTION_DOWN:
+                    $this->position += ($elapsed / $this->runtimeDown) * 100.0;
+                    if (abs($this->startPositionForAutoRef - $this->position) >= 5.0) {
+                        $this->slatPosition = 100.0; 
+                    }
+                    break;
+            }
+            $this->position = $this->Clamp($this->position);
         }
-
-        $this->position = $this->Clamp($this->position);
 
         IPS_SendDebug(
             $this->module->GetModuleInstanceID(),
             'TrackingEngine',
-            sprintf('Fahrt active | Delta=%.3fs | Position=%.2f %%', $elapsed, $this->position),
+            sprintf('Fahrt aktiv | Pos=%.1f%% | Lamelle=%.1f%%', $this->position, $this->slatPosition),
             0
         );
     }
@@ -120,6 +144,7 @@ final class TrackingEngine
     public function ReferenceClosed(): void
     {
         $this->position = 100.0;
+        $this->slatPosition = 100.0;
     }
 
     private function Clamp(float $value): float 
