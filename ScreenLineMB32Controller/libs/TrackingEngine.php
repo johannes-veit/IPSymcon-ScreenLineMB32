@@ -85,13 +85,13 @@ final class TrackingEngine
 
     public function ReferenceClosed(): void
     {
-        $this->position = 0.0;
+        // 100% bedeutet ganz unten / physisch geschlossen
+        $this->position = 100.0;
         
-        // KORREKTUR: Umstellung auf das globale IPS_SendDebug
         IPS_SendDebug(
             $this->module->GetModuleInstanceID(),
             'TrackingEngine',
-            'Referenz geschlossen gespeichert',
+            'Referenz geschlossen bei 100% gespeichert',
             0
         );
     }

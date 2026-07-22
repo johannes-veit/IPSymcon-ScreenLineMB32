@@ -140,7 +140,6 @@ class ScreenLineMB32Controller extends IPSModule
         $this->SetTimerInterval('MovementTimer', 500);
         $this->SetValue('Status', 'Fahrt läuft');
     }
-
     public function UpdateMovement(): void
     {
         $relayUp = $this->ReadPropertyInteger('RelayUp');
@@ -220,7 +219,7 @@ class ScreenLineMB32Controller extends IPSModule
         $shake = new ShakeFree($this, $this->ReadPropertyBoolean('ShakeFreeEnabled'), $this->ReadPropertyFloat('ShakeFreeDuration'));
         $nextTarget = $shake->GetNextSequenceTarget($nextStep, $finalTarget);
 
-                if ($nextTarget !== null) {
+        if ($nextTarget !== null) {
             $this->WriteAttributeInteger('ShakeFreeStep', $nextStep);
             $this->SetValue('Status', 'Shake-Free Phase ' . $nextStep);
             
@@ -238,13 +237,15 @@ class ScreenLineMB32Controller extends IPSModule
     {
         $tracking = new TrackingEngine($this, $this->ReadPropertyFloat('RuntimeUp'), $this->ReadPropertyFloat('RuntimeDown'));
         $tracking->ReferenceClosed();
-        $this->WriteAttributeFloat('CurrentPosition', 0.0);
-        $this->SetValue('Position', 0);
-        $this->SetValue('Status', 'Referenz geschlossen gespeichert');
+        
+        // Synchronisiert das IP-Symcon Attribut und die Statusvariable auf 100% (unten/geschlossen)
+        $this->WriteAttributeFloat('CurrentPosition', 100.0);
+        $this->SetValue('Position', 100);
+        $this->SetValue('Status', 'Referenz geschlossen gespeichert (100%)');
     }
+
     public function GetModuleInstanceID(): int
     {
         return $this->InstanceID;
     }
 }
-
