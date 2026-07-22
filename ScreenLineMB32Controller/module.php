@@ -70,19 +70,24 @@ class ScreenLineMB32Controller extends IPSModule
     }
 
     public function ApplyChanges()
-    {
-        parent::ApplyChanges();
+{
+    parent::ApplyChanges();
 
-        $this->SetTimerInterval(
-            'MovementTimer',
-            0
-        );
+    $this->LogMessage(
+        'ApplyChanges läuft',
+        KL_NOTIFY
+    );
 
-        $this->SetValue(
-            'Status',
-            'Bereit'
-        );
-    }
+    $this->SetTimerInterval(
+        'MovementTimer',
+        0
+    );
+
+    $this->SetValue(
+        'Status',
+        'Bereit'
+    );
+}
 
     public function RequestAction(
         $Ident,
