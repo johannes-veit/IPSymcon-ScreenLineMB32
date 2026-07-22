@@ -70,20 +70,34 @@
         },
         {
             "type": "ExpansionPanel",
-            "caption": "ScreenLine MB32 Spezialfunktionen",
+            "caption": "ScreenLine MB32 Spezialfunktionen (Shake-Free)",
             "expanded": false,
             "items": [
                 {
                     "type": "CheckBox",
                     "name": "ShakeFreeEnabled",
-                    "caption": "Shake-Free (Lamellenentspannung) aktivieren"
+                    "caption": "Endanschlags-Shake-Free aktivieren (nur bei 100% Geschlossen)"
                 },
                 {
                     "type": "NumberSpinner",
                     "name": "ShakeFreeDuration",
-                    "caption": "Shake-Free Impulsdauer",
+                    "caption": "Endanschlags-Shake-Free Impulsdauer",
                     "minimum": 0.1,
                     "maximum": 10.0,
+                    "digits": 1,
+                    "suffix": " Sek."
+                },
+                {
+                    "type": "CheckBox",
+                    "name": "IntermediateShakeEnabled",
+                    "caption": "Zwischenstopp-Shake-Free aktivieren (bei jedem regulären Halt)"
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "IntermediateShakeDuration",
+                    "caption": "Zwischenstopp-Shake-Free Wendezeit (Hin- und Rückfahrt identisch)",
+                    "minimum": 0.1,
+                    "maximum": 15.0,
                     "digits": 1,
                     "suffix": " Sek."
                 }

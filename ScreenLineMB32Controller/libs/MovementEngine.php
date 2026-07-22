@@ -21,7 +21,7 @@ final class MovementEngine
 
     public function Start(float $current, float $target, float $runtime): bool 
     {
-        if ($current === $target) {
+        if ($current === $target && $target !== 100.0 && $target !== 0.0) {
             return false;
         }
 
@@ -29,7 +29,7 @@ final class MovementEngine
         $this->targetPosition = $target;
         $this->runtime = max(0.1, $runtime);
         $this->travelDistance = abs($target - $current);
-        $this->movingDown = ($target > $current);
+        $this->movingDown = ($target > $current || ($current === 100.0 && $target === 100.0));
 
         if ($this->movingDown) {
             if (!$this->relay->MoveDown()) {
@@ -43,11 +43,10 @@ final class MovementEngine
 
         $this->running = true;
 
-        // KORREKTUR: Nutzung von IPS_SendDebug über den Instanz-Getter zur Vermeidung von Sichtbarkeitsfehlern
         IPS_SendDebug(
             $this->module->GetModuleInstanceID(),
             'MovementEngine',
-            sprintf('Start %.1f -> %.1f (%.1fs)', $current, $target, $runtime),
+            sprintf('Start %.1f -> %.1f (%.1fs inkl. Trägheiten/Nachlauf)', $current, $target, $runtime),
             0
         );
 

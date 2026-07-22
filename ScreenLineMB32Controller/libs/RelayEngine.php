@@ -10,14 +10,8 @@ final class RelayEngine
     private int $relayDown;
     private int $switchPause;
 
-    public function __construct(
-        IPSModule $module,
-        int $relayUp,
-        int $relayDown,
-        int $switchPause = 400
-    ) {
+    public function __construct(IPSModule $module, int $relayUp, int $relayDown, int $switchPause = 400) {
         $this->module = $module;
-        // KORREKTUR: Übergabe der numerischen ID direkt per Methode an den Adapter
         $this->lcn = new LCNAdapter($module->GetModuleInstanceID());
         $this->relayUp = $relayUp;
         $this->relayDown = $relayDown;
@@ -29,13 +23,10 @@ final class RelayEngine
         if (!$this->Validate()) {
             return false;
         }
-
         $this->Stop();
-
         if ($this->switchPause > 0) {
             IPS_Sleep($this->switchPause);
         }
-
         return $this->lcn->SetOutput($this->relayUp, true);
     }
 
@@ -44,13 +35,10 @@ final class RelayEngine
         if (!$this->Validate()) {
             return false;
         }
-
         $this->Stop();
-
         if ($this->switchPause > 0) {
             IPS_Sleep($this->switchPause);
         }
-
         return $this->lcn->SetOutput($this->relayDown, true);
     }
 
@@ -64,7 +52,6 @@ final class RelayEngine
         if ($this->relayUp <= 0 || $this->relayDown <= 0) {
             return false;
         }
-
         return $this->relayUp !== $this->relayDown;
     }
 }

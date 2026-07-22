@@ -26,7 +26,6 @@ final class SafetyEngine
         $this->lastStartTime = microtime(true);
         $this->running = true;
 
-        // KORREKTUR: Nutzung der öffentlichen Getter-Methode zur Vermeidung des Sichtbarkeitsfehlers
         IPS_SendDebug($this->module->GetModuleInstanceID(), 'SafetyEngine', 'Fahrüberwachung gestartet', 0);
         return $this->lastStartTime; 
     }
@@ -55,22 +54,7 @@ final class SafetyEngine
 
     public function ValidateRuntime(float $runtime): bool
     {
-        return ($runtime >= 0.1 && $runtime <= 600.0);
-    }
-
-    public function ValidateRelayCombination(int $up, int $down): bool 
-    {
-        if ($up <= 0 || $down <= 0) {
-            IPS_SendDebug($this->module->GetModuleInstanceID(), 'SafetyEngine', 'Validierungsfehler: Instanz-IDs fehlen.', 0);
-            return false;
-        }
-
-        if ($up === $down) {
-            IPS_SendDebug($this->module->GetModuleInstanceID(), 'SafetyEngine', 'Validierungsfehler: Relais für AUF und AB sind identisch!', 0);
-            return false;
-        }
-
-        return true;
+        return ($runtime >= 0.1 && $runtime <= 650.0);
     }
 
     public function SafeStop(RelayEngine $relay): void
