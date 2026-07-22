@@ -8,13 +8,17 @@ final class MovementEngine
 
     private RelayEngine $relay;
 
-    private float $startPosition;
+    private float $startPosition = 0.0;
 
-    private float $targetPosition;
+    private float $targetPosition = 0.0;
 
-    private float $runtime;
+    private float $runtime = 0.0;
 
-    private string $direction;
+    private float $travelDistance = 0.0;
+
+    private bool $running = false;
+
+    private bool $movingDown = false;
 
 
     public function __construct(
@@ -32,19 +36,18 @@ final class MovementEngine
         float $runtime
     ): bool {
 
-        if ($current === $target) {
+        if ($current == $target) {
             return false;
         }
 
-
         $this->startPosition = $current;
         $this->targetPosition = $target;
-        $this->runtime = $runtime;
+        $this->runtime = max(0.1, $runtime);
+        $this->travelDistance = abs($target - $current);
 
+        $this->movingDown = ($target > $current);
 
-        if ($target > $current) {
-
-            $this->direction = 'DOWN';
+        if ($this->movingDown) {
 
             if (!$this->relay->MoveDown()) {
                 return false;
@@ -52,45 +55,52 @@ final class MovementEngine
 
         } else {
 
-            $this->direction = 'UP';
-
             if (!$this->relay->MoveUp()) {
                 return false;
             }
         }
 
+        $this->running = true;
 
         $this->module->SendDebug(
             'MovementEngine',
-            'Fahrt gestartet Richtung ' . $this->direction,
+            sprintf(
+                'Start %.1f -> %.1f (%.1fs)',
+                $current,
+                $target,
+                $runtime
+            ),
             0
         );
 
-
         return true;
     }
-
 
 
     public function Stop(): void
     {
         $this->relay->Stop();
 
+        $this->running = false;
 
         $this->module->SendDebug(
             'MovementEngine',
-            'Fahrt gestoppt',
+            'Bewegung beendet',
             0
         );
     }
 
 
-
-    public function GetDirection(): string
+    public function IsRunning(): bool
     {
-        return $this->direction;
+        return $this->running;
     }
 
+
+    public function IsMovingDown(): bool
+    {
+        return $this->movingDown;
+    }
 
 
     public function GetRuntime(): float
@@ -99,40 +109,69 @@ final class MovementEngine
     }
 
 
-
     public function GetTarget(): float
     {
         return $this->targetPosition;
     }
 
 
+    public function GetStart(): float
+    {
+        return $this->startPosition;
+    }
+
+
+    public function GetRemainingTime(
+        float $elapsed
+    ): float {
+
+        return max(
+            0.0,
+            $this->runtime - $elapsed
+        );
+    }
+
+
+    public function GetProgress(
+        float $elapsed
+    ): float {
+
+        if ($this->runtime <= 0) {
+            return 1.0;
+        }
+
+        return min(
+            1.0,
+            max(
+                0.0,
+                $elapsed / $this->runtime
+            )
+        );
+    }
+
 
     public function CalculatePosition(
         float $elapsed
     ): float {
 
-        if ($this->runtime <= 0) {
-            return $this->startPosition;
-        }
-
-
-        $change =
-            ($elapsed / $this->runtime)
-            * 100;
-
-
-        if ($this->direction === 'UP') {
-
-            return max(
-                0,
-                $this->startPosition - $change
+        $progress =
+            $this->GetProgress(
+                $elapsed
             );
-        }
 
+        $position =
+            $this->startPosition +
+            (
+                ($this->targetPosition - $this->startPosition)
+                * $progress
+            );
 
         return min(
-            100,
-            $this->startPosition + $change
+            100.0,
+            max(
+                0.0,
+                $position
+            )
         );
     }
 }
