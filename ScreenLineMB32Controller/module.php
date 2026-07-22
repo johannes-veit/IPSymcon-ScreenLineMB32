@@ -15,12 +15,12 @@ class ScreenLineMB32Controller extends IPSModule
         parent::Create();
 
         $this->RegisterPropertyInteger(
-            'RelayUpStatusID',
+            'RelayUp',
             0
         );
 
         $this->RegisterPropertyInteger(
-            'RelayDownStatusID',
+            'RelayDown',
             0
         );
 
@@ -92,7 +92,7 @@ class ScreenLineMB32Controller extends IPSModule
         if ($Ident === 'Position') {
 
             $this->MoveTo(
-                (float) $Value
+                (float)$Value
             );
         }
     }
@@ -113,10 +113,10 @@ class ScreenLineMB32Controller extends IPSModule
         $relay = new RelayEngine(
             $this,
             $this->ReadPropertyInteger(
-                'RelayUpStatusID'
+                'RelayUp'
             ),
             $this->ReadPropertyInteger(
-                'RelayDownStatusID'
+                'RelayDown'
             ),
             $this->ReadPropertyInteger(
                 'SwitchPause'
@@ -191,7 +191,7 @@ class ScreenLineMB32Controller extends IPSModule
 
         $this->SetValue(
             'Position',
-            (int) $position
+            (int)$position
         );
 
         if (
@@ -213,7 +213,7 @@ class ScreenLineMB32Controller extends IPSModule
 
             $this->SetValue(
                 'Position',
-                (int) $this->movement->GetTarget()
+                (int)$this->movement->GetTarget()
             );
 
             $this->SetValue(
