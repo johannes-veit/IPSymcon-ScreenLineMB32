@@ -27,13 +27,13 @@
         },
         {
             "type": "ExpansionPanel",
-            "caption": "Fahrzeiten & Kalibrierung",
+            "caption": "Fahrzeiten & Trägheitskompensation",
             "expanded": true,
             "items": [
                 {
                     "type": "NumberSpinner",
                     "name": "RuntimeUp",
-                    "caption": "Laufzeit nach OBEN",
+                    "caption": "Reine Laufzeit nach OBEN (ohne Trägheit)",
                     "minimum": 1.0,
                     "maximum": 600.0,
                     "digits": 1,
@@ -42,9 +42,27 @@
                 {
                     "type": "NumberSpinner",
                     "name": "RuntimeDown",
-                    "caption": "Laufzeit nach UNTEN",
+                    "caption": "Reine Laufzeit nach UNTEN (ohne Trägheit)",
                     "minimum": 1.0,
                     "maximum": 600.0,
+                    "digits": 1,
+                    "suffix": " Sek."
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "SlatTurnTime",
+                    "caption": "Lamellenwendezeit bei Richtungswechsel",
+                    "minimum": 0.0,
+                    "maximum": 10.0,
+                    "digits": 1,
+                    "suffix": " Sek."
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "SoftStartTime",
+                    "caption": "Sanftanlaufzeit (bei jedem Fahrtantritt)",
+                    "minimum": 0.0,
+                    "maximum": 5.0,
                     "digits": 1,
                     "suffix": " Sek."
                 }

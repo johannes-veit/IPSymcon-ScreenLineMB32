@@ -7,33 +7,44 @@ final class TrackingEngine
     private IPSModule $module;
     private float $runtimeUp;
     private float $runtimeDown;
+    private float $remainingSlatTime = 0.0;
+    private float $remainingSoftStartTime = 0.0;
     private float $position = 0.0;
     private float $lastTimestamp = 0.0;
 
     public const DIRECTION_UP = 1;
     public const DIRECTION_DOWN = 2;
 
-    public function __construct(IPSModule $module, float $runtimeUp, float $runtimeDown) 
+    public function __construct(IPSModule $module, float $runtimeUp, float $runtimeDown, float $slatTime = 0.0, float $softTime = 0.0) 
     {
         $this->module = $module;
         $this->runtimeUp = max(0.1, $runtimeUp);
         $this->runtimeDown = max(0.1, $runtimeDown);
+        $this->remainingSlatTime = max(0.0, $slatTime);
+        $this->remainingSoftStartTime = max(0.0, $softTime);
     }
 
-    public function Rehydrate(float $position, float $lastTimestamp): void
+    public function Rehydrate(float $position, float $lastTimestamp, float $remSlat, float $remSoft): void
     {
         $this->position = $this->Clamp($position);
         $this->lastTimestamp = $lastTimestamp;
-    }
-
-    public function SetPosition(float $position): void
-    {
-        $this->position = $this->Clamp($position);
+        $this->remainingSlatTime = max(0.0, $remSlat);
+        $this->remainingSoftStartTime = max(0.0, $remSoft);
     }
 
     public function GetPosition(): float
     {
         return $this->position;
+    }
+
+    public function GetRemainingSlatTime(): float
+    {
+        return $this->remainingSlatTime;
+    }
+
+    public function GetRemainingSoftStartTime(): float
+    {
+        return $this->remainingSoftStartTime;
     }
 
     public function Move(int $direction): void 
@@ -47,6 +58,33 @@ final class TrackingEngine
         $elapsed = $now - $this->lastTimestamp;
         $this->lastTimestamp = $now;
 
+        // Phase 1: Sanftanlauf abarbeiten (Trägt immer und zuerst ab)
+        if ($this->remainingSoftStartTime > 0.0) {
+            if ($elapsed >= $this->remainingSoftStartTime) {
+                $elapsed -= $this->remainingSoftStartTime;
+                $this->remainingSoftStartTime = 0.0;
+                IPS_SendDebug($this->module->GetModuleInstanceID(), 'TrackingEngine', 'Sanftanlauf beendet.', 0);
+            } else {
+                $this->remainingSoftStartTime -= $elapsed;
+                IPS_SendDebug($this->module->GetModuleInstanceID(), 'TrackingEngine', sprintf('In Sanftanlauf-Phase: Noch %.2fs verbleibend', $this->remainingSoftStartTime), 0);
+                return; 
+            }
+        }
+
+        // Phase 2: Lamellenwendung abarbeiten (Nur bei Richtungswechsel)
+        if ($this->remainingSlatTime > 0.0) {
+            if ($elapsed >= $this->remainingSlatTime) {
+                $elapsed -= $this->remainingSlatTime;
+                $this->remainingSlatTime = 0.0;
+                IPS_SendDebug($this->module->GetModuleInstanceID(), 'TrackingEngine', 'Lamellenwendung beendet. Behangpaket verfährt jetzt.', 0);
+            } else {
+                $this->remainingSlatTime -= $elapsed;
+                IPS_SendDebug($this->module->GetModuleInstanceID(), 'TrackingEngine', sprintf('In Lamellenwende-Phase: Noch %.2fs verbleibend', $this->remainingSlatTime), 0);
+                return;
+            }
+        }
+
+        // Phase 3: Reine Behangbewegung berechnen
         switch ($direction) {
             case self::DIRECTION_UP:
                 $this->position -= ($elapsed / $this->runtimeUp) * 100.0;
@@ -62,7 +100,7 @@ final class TrackingEngine
         IPS_SendDebug(
             $this->module->GetModuleInstanceID(),
             'TrackingEngine',
-            sprintf('Delta=%.3fs | Position=%.2f %%', $elapsed, $this->position),
+            sprintf('Fahrt aktiv | Delta=%.3fs | Position=%.2f %%', $elapsed, $this->position),
             0
         );
     }
@@ -70,12 +108,11 @@ final class TrackingEngine
     public function EstimateRuntime(float $target): float 
     {
         $distance = abs($target - $this->position);
+        $baseRuntime = ($target > $this->position) 
+            ? (($distance / 100.0) * $this->runtimeDown) 
+            : (($distance / 100.0) * $this->runtimeUp);
 
-        if ($target > $this->position) {
-            return ($distance / 100.0) * $this->runtimeDown;
-        }
-
-        return ($distance / 100.0) * $this->runtimeUp;
+        return $baseRuntime + $this->remainingSlatTime + $this->remainingSoftStartTime;
     }
 
     public function IsAtTarget(float $target, float $tolerance = 0.5): bool 
@@ -85,15 +122,7 @@ final class TrackingEngine
 
     public function ReferenceClosed(): void
     {
-        // 100% bedeutet ganz unten / physisch geschlossen
         $this->position = 100.0;
-        
-        IPS_SendDebug(
-            $this->module->GetModuleInstanceID(),
-            'TrackingEngine',
-            'Referenz geschlossen bei 100% gespeichert',
-            0
-        );
     }
 
     private function Clamp(float $value): float 
