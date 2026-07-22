@@ -8,30 +8,28 @@
             "type": "Label",
             "caption": "Schritt für Schritt Einrichtung der ScreenLine MB32 Jalousie."
         },
-
         {
             "type": "ExpansionPanel",
-            "caption": "1. LCN Relais auswählen",
+            "caption": "1. Statusvariablen auswählen",
             "items": [
                 {
                     "type": "NumberSpinner",
-                    "name": "RelayUp",
-                    "caption": "Relais AUF",
+                    "name": "RelayUpStatusID",
+                    "caption": "Statusvariable AUF",
                     "minimum": 0,
                     "maximum": 65535,
-                    "hint": "LCN Ausgang für AUF. Dieser Ausgang schaltet das Finder Koppelrelais für die Aufwärtsbewegung."
+                    "hint": "ID der Statusvariable des LCN-Relais für die Aufwärtsfahrt."
                 },
                 {
                     "type": "NumberSpinner",
-                    "name": "RelayDown",
-                    "caption": "Relais AB",
+                    "name": "RelayDownStatusID",
+                    "caption": "Statusvariable AB",
                     "minimum": 0,
                     "maximum": 65535,
-                    "hint": "LCN Ausgang für AB. Dieser Ausgang schaltet das Finder Koppelrelais für die Abwärtsbewegung."
+                    "hint": "ID der Statusvariable des LCN-Relais für die Abwärtsfahrt."
                 }
             ]
         },
-
         {
             "type": "ExpansionPanel",
             "caption": "2. Motorlaufzeiten einstellen",
@@ -56,7 +54,6 @@
                 }
             ]
         },
-
         {
             "type": "ExpansionPanel",
             "caption": "3. Sicherheit",
@@ -68,7 +65,7 @@
                     "suffix": " Millisekunden",
                     "minimum": 100,
                     "maximum": 3000,
-                    "hint": "Pause zwischen Auf und Ab. Beide Relais sind während dieser Zeit sicher ausgeschaltet."
+                    "hint": "Pause zwischen AUF und AB. Beide Relais sind während dieser Zeit ausgeschaltet."
                 },
                 {
                     "type": "NumberSpinner",
@@ -77,11 +74,10 @@
                     "suffix": " Sekunden",
                     "minimum": 10,
                     "maximum": 900,
-                    "hint": "Sicherheitsabschaltung falls ein Motor unerwartet weiterläuft."
+                    "hint": "Sicherheitsabschaltung, falls ein Motor unerwartet weiterläuft."
                 }
             ]
         },
-
         {
             "type": "ExpansionPanel",
             "caption": "4. ScreenLine MB32 Funktionen",
@@ -90,7 +86,7 @@
                     "type": "CheckBox",
                     "name": "ShakeFreeEnabled",
                     "caption": "Shake Free aktivieren",
-                    "hint": "Nach einer Abwärtsfahrt wird die starke Shake-Free Bewegung ausgeführt."
+                    "hint": "Nach einer Abwärtsfahrt wird die Shake-Free-Bewegung ausgeführt."
                 },
                 {
                     "type": "NumberSpinner",
@@ -99,11 +95,10 @@
                     "suffix": " Sekunden",
                     "minimum": 0.5,
                     "maximum": 10,
-                    "hint": "Zeit der kurzen Bewegungsphase."
+                    "hint": "Dauer der kurzen Shake-Free-Bewegung."
                 }
             ]
         },
-
         {
             "type": "ExpansionPanel",
             "caption": "5. Erweiterte Einstellungen",
