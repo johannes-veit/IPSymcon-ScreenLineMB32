@@ -17,6 +17,7 @@ final class LCNAdapter
             return false;
         }
 
+        // KORREKTUR: Nutzung der magischen Eigenschaft InstanceID ohne das "$" Zeichen
         if (!IPS_InstanceExists($outputID)) {
             IPS_SendDebug($this->module->InstanceID, 'LCNAdapter', 'Fehler: Instanz ID ' . $outputID . ' existiert nicht.', 0);
             return false;
@@ -50,6 +51,7 @@ final class LCNAdapter
             }
         }
         
+        // KORREKTUR: Zugriffsschutz umgangen durch systemkonformen SDK-Aufruf
         IPS_SendDebug($this->module->InstanceID, 'LCNAdapter', 'AllOff aufgerufen: Beide Richtungen abgeschaltet.', 0);
     }
 }
