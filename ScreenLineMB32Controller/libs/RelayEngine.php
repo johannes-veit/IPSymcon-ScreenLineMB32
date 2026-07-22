@@ -8,17 +8,17 @@ final class RelayEngine
 
     private LCNAdapter $lcn;
 
-    private int $relayUp;
+    private int $relayUpStatusID;
 
-    private int $relayDown;
+    private int $relayDownStatusID;
 
     private int $switchPause;
 
 
     public function __construct(
         IPSModule $module,
-        int $relayUp,
-        int $relayDown,
+        int $relayUpStatusID,
+        int $relayDownStatusID,
         int $switchPause = 400
     ) {
 
@@ -28,9 +28,9 @@ final class RelayEngine
             $module
         );
 
-        $this->relayUp = $relayUp;
+        $this->relayUpStatusID = $relayUpStatusID;
 
-        $this->relayDown = $relayDown;
+        $this->relayDownStatusID = $relayDownStatusID;
 
         $this->switchPause = $switchPause;
     }
@@ -42,17 +42,14 @@ final class RelayEngine
             return false;
         }
 
-
         $this->Stop();
-
 
         usleep(
             $this->switchPause * 1000
         );
 
-
         return $this->lcn->SetOutput(
-            $this->relayUp,
+            $this->relayUpStatusID,
             true
         );
     }
@@ -64,17 +61,14 @@ final class RelayEngine
             return false;
         }
 
-
         $this->Stop();
-
 
         usleep(
             $this->switchPause * 1000
         );
 
-
         return $this->lcn->SetOutput(
-            $this->relayDown,
+            $this->relayDownStatusID,
             true
         );
     }
@@ -83,49 +77,46 @@ final class RelayEngine
     public function Stop(): void
     {
         $this->lcn->AllOff(
-            $this->relayUp,
-            $this->relayDown
+            $this->relayUpStatusID,
+            $this->relayDownStatusID
         );
     }
 
 
     public function Validate(): bool
     {
-        if ($this->relayUp <= 0) {
+        if ($this->relayUpStatusID <= 0) {
 
             $this->module->SendDebug(
                 'RelayEngine',
-                'AUF Relais fehlt',
+                'AUF Statusvariable fehlt',
                 0
             );
 
             return false;
         }
 
-
-        if ($this->relayDown <= 0) {
+        if ($this->relayDownStatusID <= 0) {
 
             $this->module->SendDebug(
                 'RelayEngine',
-                'AB Relais fehlt',
+                'AB Statusvariable fehlt',
                 0
             );
 
             return false;
         }
 
-
-        if ($this->relayUp === $this->relayDown) {
+        if ($this->relayUpStatusID === $this->relayDownStatusID) {
 
             $this->module->SendDebug(
                 'RelayEngine',
-                'AUF und AB Relais identisch',
+                'AUF und AB Statusvariable identisch',
                 0
             );
 
             return false;
         }
-
 
         return true;
     }
