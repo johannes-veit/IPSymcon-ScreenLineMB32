@@ -1,35 +1,97 @@
 {
     "elements": [
         {
-            "type": "ValidationTextBox",
-            "name": "RelayUp",
-            "caption": "Relais AUF (Instanz-ID)"
+            "type": "ExpansionPanel",
+            "caption": "Hardware-Konfiguration (LCN)",
+            "expanded": true,
+            "items": [
+                {
+                    "type": "SelectInstance",
+                    "name": "RelayUp",
+                    "caption": "LCN-Relais für AUF"
+                },
+                {
+                    "type": "SelectInstance",
+                    "name": "RelayDown",
+                    "caption": "LCN-Relais für AB"
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "SwitchPause",
+                    "caption": "Umschaltpause (ms)",
+                    "minimum": 50,
+                    "maximum": 2000,
+                    "suffix": " ms"
+                }
+            ]
         },
         {
-            "type": "ValidationTextBox",
-            "name": "RelayDown",
-            "caption": "Relais AB (Instanz-ID)"
+            "type": "ExpansionPanel",
+            "caption": "Fahrzeiten & Kalibrierung",
+            "expanded": true,
+            "items": [
+                {
+                    "type": "NumberSpinner",
+                    "name": "RuntimeUp",
+                    "caption": "Laufzeit nach OBEN",
+                    "minimum": 1.0,
+                    "maximum": 600.0,
+                    "digits": 1,
+                    "suffix": " Sek."
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "RuntimeDown",
+                    "caption": "Laufzeit nach UNTEN",
+                    "minimum": 1.0,
+                    "maximum": 600.0,
+                    "digits": 1,
+                    "suffix": " Sek."
+                }
+            ]
         },
         {
-            "type": "NumberSpinner",
-            "name": "RuntimeUp",
-            "caption": "Laufzeit AUF (Sekunden)"
-        },
-        {
-            "type": "NumberSpinner",
-            "name": "RuntimeDown",
-            "caption": "Laufzeit AB (Sekunden)"
-        },
-        {
-            "type": "NumberSpinner",
-            "name": "SwitchPause",
-            "caption": "Umschaltpause (ms)"
+            "type": "ExpansionPanel",
+            "caption": "ScreenLine MB32 Spezialfunktionen",
+            "expanded": false,
+            "items": [
+                {
+                    "type": "CheckBox",
+                    "name": "ShakeFreeEnabled",
+                    "caption": "Shake-Free (Lamellenentspannung) aktivieren"
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "ShakeFreeDuration",
+                    "caption": "Shake-Free Impulsdauer",
+                    "minimum": 0.1,
+                    "maximum": 10.0,
+                    "digits": 1,
+                    "suffix": " Sek."
+                }
+            ]
         }
     ],
     "actions": [
         {
-            "type": "Label",
-            "caption": "Bitte die Instanz-IDs der beiden LCN-Relais eintragen."
+            "type": "Button",
+            "caption": "Test: Fahre auf 0% (Ganz OBEN)",
+            "onClick": "SLMB32_MoveTo($InstanceID, 0);"
+        },
+        {
+            "type": "Button",
+            "caption": "Test: Fahre auf 50% (Mitte)",
+            "onClick": "SLMB32_MoveTo($InstanceID, 50);"
+        },
+        {
+            "type": "Button",
+            "caption": "Test: Fahre auf 100% (Ganz UNTEN)",
+            "onClick": "SLMB32_MoveTo($InstanceID, 100);"
+        },
+        {
+            "type": "Button",
+            "caption": "Referenzieren (Geschlossen)",
+            "onClick": "SLMB32_ReferenceClosed($InstanceID);"
         }
     ]
 }

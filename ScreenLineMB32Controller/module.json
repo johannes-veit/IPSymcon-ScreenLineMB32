@@ -8,6 +8,8 @@
     ],
     "parentRequirements": [],
     "childRequirements": [],
-    "implemented": [],
+    "implemented": [
+        "{D3304400-D330-4400-D330-4400D3304400}"
+    ],
     "prefix": "SLMB32"
 }

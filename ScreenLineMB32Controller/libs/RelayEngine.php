@@ -5,13 +5,9 @@ declare(strict_types=1);
 final class RelayEngine
 {
     private IPSModule $module;
-
     private LCNAdapter $lcn;
-
     private int $relayUp;
-
     private int $relayDown;
-
     private int $switchPause;
 
     public function __construct(
@@ -20,17 +16,10 @@ final class RelayEngine
         int $relayDown,
         int $switchPause = 400
     ) {
-
         $this->module = $module;
-
-        $this->lcn = new LCNAdapter(
-            $module
-        );
-
+        $this->lcn = new LCNAdapter($module);
         $this->relayUp = $relayUp;
-
         $this->relayDown = $relayDown;
-
         $this->switchPause = $switchPause;
     }
 
@@ -42,14 +31,12 @@ final class RelayEngine
 
         $this->Stop();
 
-        usleep(
-            $this->switchPause * 1000
-        );
+        if ($this->switchPause > 0) {
+            $this->module->SendDebug('RelayEngine', sprintf('Warte Umschaltpause: %d ms', $this->switchPause), 0);
+            IPS_Sleep($this->switchPause);
+        }
 
-        return $this->lcn->SetOutput(
-            $this->relayUp,
-            true
-        );
+        return $this->lcn->SetOutput($this->relayUp, true);
     }
 
     public function MoveDown(): bool
@@ -60,59 +47,25 @@ final class RelayEngine
 
         $this->Stop();
 
-        usleep(
-            $this->switchPause * 1000
-        );
+        if ($this->switchPause > 0) {
+            $this->module->SendDebug('RelayEngine', sprintf('Warte Umschaltpause: %d ms', $this->switchPause), 0);
+            IPS_Sleep($this->switchPause);
+        }
 
-        return $this->lcn->SetOutput(
-            $this->relayDown,
-            true
-        );
+        return $this->lcn->SetOutput($this->relayDown, true);
     }
 
     public function Stop(): void
     {
-        $this->lcn->AllOff(
-            $this->relayUp,
-            $this->relayDown
-        );
+        $this->lcn->AllOff($this->relayUp, $this->relayDown);
     }
 
     private function Validate(): bool
     {
-        if ($this->relayUp <= 0) {
-
-            $this->module->SendDebug(
-                'RelayEngine',
-                'Relais AUF fehlt',
-                0
-            );
-
+        if ($this->relayUp <= 0 || $this->relayDown <= 0) {
             return false;
         }
 
-        if ($this->relayDown <= 0) {
-
-            $this->module->SendDebug(
-                'RelayEngine',
-                'Relais AB fehlt',
-                0
-            );
-
-            return false;
-        }
-
-        if ($this->relayUp === $this->relayDown) {
-
-            $this->module->SendDebug(
-                'RelayEngine',
-                'Relais AUF und AB identisch',
-                0
-            );
-
-            return false;
-        }
-
-        return true;
+        return $this->relayUp !== $this->relayDown;
     }
 }
