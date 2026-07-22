@@ -63,8 +63,6 @@ class ScreenLineMB32Controller extends IPSModule
         
         // Attribute zur Stillstands-Überwachung für den Standby-Modus
         $this->RegisterAttributeFloat('LastLoggedPosition', -1.0);
-        
-        // FIX: Korrekte Registrierung des Attributes (StaticPositionDuration) vor der Benutzung
         $this->RegisterAttributeFloat('StaticPositionDuration', 0.0);
 
         // Zustands-Verwaltung für die Zwischenstopp-Sequenz
@@ -79,7 +77,6 @@ class ScreenLineMB32Controller extends IPSModule
     public function ApplyChanges(): void
     {
         parent::ApplyChanges();
-        $this->UnregisterAllMessages();
 
         $relayUp = $this->ReadPropertyInteger('RelayUp');
         $relayDown = $this->ReadPropertyInteger('RelayDown');
