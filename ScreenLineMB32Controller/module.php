@@ -34,8 +34,15 @@ class ScreenLineMB32Controller extends IPSModule
         $this->RegisterVariableInteger('Position', 'Position', '~Intensity.100', 10);
         $this->EnableAction('Position');
 
-        // KORREKTUR: Direkte Zuweisung des nativen IP-Symcon Profils ohne fehlerhafte Erstellungsprüfung
-        $this->RegisterVariableInteger('SlatPosition', 'Lamelle', '~SlatPosition', 15);
+        // KORREKTUR: Eigenes Profil ohne Tilde anlegen, falls es fehlt
+        if (!IPS_VariableProfileExists('SlatPosition')) {
+            IPS_CreateVariableProfile('SlatPosition', 1); // 1 = Integer
+            IPS_SetVariableProfileValues('SlatPosition', 0, 100, 1);
+            IPS_SetVariableProfileText('SlatPosition', '%', ' %');
+        }
+
+        // KORREKTUR: Zuweisung des sauberen Profils ohne Tilde (Fehler in Zeile 38 behoben!)
+        $this->RegisterVariableInteger('SlatPosition', 'Lamelle', 'SlatPosition', 15);
         $this->EnableAction('SlatPosition');
         
         $this->RegisterVariableString('Status', 'Status', '', 20);
