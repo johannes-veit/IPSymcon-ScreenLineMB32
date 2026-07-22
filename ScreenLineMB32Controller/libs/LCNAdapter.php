@@ -13,55 +13,31 @@ final class LCNAdapter
     }
 
     public function SetOutput(
-        int $statusVariableID,
+        int $outputID,
         bool $state
     ): bool {
 
-        if ($statusVariableID <= 0) {
+        if ($outputID <= 0) {
 
             $this->module->SendDebug(
                 'LCNAdapter',
-                'Ungültige Statusvariablen-ID',
+                'Ungültige Ausgangs-ID',
                 0
             );
 
             return false;
         }
 
-        if (!IPS_VariableExists($statusVariableID)) {
-
-            $this->module->SendDebug(
-                'LCNAdapter',
-                'Statusvariable existiert nicht',
-                0
-            );
-
-            return false;
-        }
-
-        try {
-
-            RequestAction(
-                $statusVariableID,
-                $state
-            );
-
-        } catch (Throwable $e) {
-
-            $this->module->SendDebug(
-                'LCNAdapter',
-                $e->getMessage(),
-                0
-            );
-
-            return false;
-        }
+        LCN_SwitchRelay(
+            $outputID,
+            $state
+        );
 
         $this->module->SendDebug(
             'LCNAdapter',
             sprintf(
-                'Statusvariable %d -> %s',
-                $statusVariableID,
+                'Relais %d -> %s',
+                $outputID,
                 $state ? 'EIN' : 'AUS'
             ),
             0
@@ -71,18 +47,22 @@ final class LCNAdapter
     }
 
     public function AllOff(
-        int $relayUpStatusID,
-        int $relayDownStatusID
+        int $relayUp,
+        int $relayDown
     ): void {
 
-        $this->SetOutput(
-            $relayUpStatusID,
-            false
-        );
+        if ($relayUp > 0) {
+            LCN_SwitchRelay(
+                $relayUp,
+                false
+            );
+        }
 
-        $this->SetOutput(
-            $relayDownStatusID,
-            false
-        );
+        if ($relayDown > 0) {
+            LCN_SwitchRelay(
+                $relayDown,
+                false
+            );
+        }
     }
 }
