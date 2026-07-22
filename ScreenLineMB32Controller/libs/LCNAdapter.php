@@ -18,16 +18,16 @@ final class LCNAdapter
         }
 
         if (!IPS_InstanceExists($outputID)) {
-            $this->module->SendDebug('LCNAdapter', 'Fehler: Instanz ID ' . $outputID . ' existiert nicht.', 0);
+            IPS_SendDebug($this->module->InstanceID, 'LCNAdapter', 'Fehler: Instanz ID ' . $outputID . ' existiert nicht.', 0);
             return false;
         }
 
         try {
             LCN_SwitchRelay($outputID, $state);
-            $this->module->SendDebug('LCNAdapter', sprintf('Instanz %d auf %s gesetzt', $outputID, $state ? 'AN' : 'AUS'), 0);
+            IPS_SendDebug($this->module->InstanceID, 'LCNAdapter', sprintf('Instanz %d auf %s gesetzt', $outputID, $state ? 'AN' : 'AUS'), 0);
             return true;
         } catch (Throwable $e) {
-            $this->module->SendDebug('LCNAdapter', 'Fehler beim Schalten: ' . $e->getMessage(), 0);
+            IPS_SendDebug($this->module->InstanceID, 'LCNAdapter', 'Fehler beim Schalten: ' . $e->getMessage(), 0);
             return false;
         }
     }
@@ -50,6 +50,6 @@ final class LCNAdapter
             }
         }
         
-        $this->module->SendDebug('LCNAdapter', 'AllOff aufgerufen: Beide Richtungen abgeschaltet.', 0);
+        IPS_SendDebug($this->module->InstanceID, 'LCNAdapter', 'AllOff aufgerufen: Beide Richtungen abgeschaltet.', 0);
     }
 }
