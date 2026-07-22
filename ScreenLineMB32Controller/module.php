@@ -63,14 +63,16 @@ class ScreenLineMB32Controller extends IPSModule
         
         // Attribute zur Stillstands-Überwachung für den Standby-Modus
         $this->RegisterAttributeFloat('LastLoggedPosition', -1.0);
-        $this->WriteAttributeFloat('StaticPositionDuration', 0.0);
+        
+        // FIX: Korrekte Registrierung des Attributes (StaticPositionDuration) vor der Benutzung
+        $this->RegisterAttributeFloat('StaticPositionDuration', 0.0);
 
         // Zustands-Verwaltung für die Zwischenstopp-Sequenz
         $this->RegisterAttributeInteger('IntermediateShakeStep', 0);
         $this->RegisterAttributeFloat('IntermediateShakeRemaining', 0.0);
         $this->RegisterAttributeInteger('OriginalDirection', 0);
 
-        // Timer-Aufruf korrigiert
+        // Timer-Aufruf registrieren
         $this->RegisterTimer('MovementTimer', 0, 'IPS_RequestAction($_IPS[\'TARGET\'], "UpdateMovement", 0);');
     }
 
@@ -80,7 +82,7 @@ class ScreenLineMB32Controller extends IPSModule
         $this->UnregisterAllMessages();
 
         $relayUp = $this->ReadPropertyInteger('RelayUp');
-        $relayDown = $this->ReadPropertyInteger('ReadPropertyInteger');
+        $relayDown = $this->ReadPropertyInteger('RelayDown');
 
         // Bidirektionales LCN-Relais Tracking aktivieren
         if ($relayUp > 0 && IPS_InstanceExists($relayUp)) {
