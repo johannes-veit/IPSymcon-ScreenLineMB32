@@ -6,28 +6,23 @@ require_once __DIR__ . '/libs/LCNAdapter.php';
 require_once __DIR__ . '/libs/RelayEngine.php';
 require_once __DIR__ . '/libs/MovementEngine.php';
 
-
 class ScreenLineMB32Controller extends IPSModule
 {
-
     private ?MovementEngine $movement = null;
-
 
     public function Create()
     {
         parent::Create();
 
-
         $this->RegisterPropertyInteger(
-            'RelayUp',
+            'RelayUpStatusID',
             0
         );
 
         $this->RegisterPropertyInteger(
-            'RelayDown',
+            'RelayDownStatusID',
             0
         );
-
 
         $this->RegisterPropertyFloat(
             'RuntimeUp',
@@ -39,12 +34,10 @@ class ScreenLineMB32Controller extends IPSModule
             180
         );
 
-
         $this->RegisterPropertyInteger(
             'SwitchPause',
             400
         );
-
 
         $this->RegisterVariableInteger(
             'Position',
@@ -57,7 +50,6 @@ class ScreenLineMB32Controller extends IPSModule
             'Position'
         );
 
-
         $this->RegisterVariableString(
             'Status',
             'Status',
@@ -65,12 +57,10 @@ class ScreenLineMB32Controller extends IPSModule
             20
         );
 
-
         $this->RegisterAttributeFloat(
             'CurrentPosition',
             0
         );
-
 
         $this->RegisterTimer(
             'MovementTimer',
@@ -79,18 +69,14 @@ class ScreenLineMB32Controller extends IPSModule
         );
     }
 
-
-
     public function ApplyChanges()
     {
         parent::ApplyChanges();
-
 
         $this->SetTimerInterval(
             'MovementTimer',
             0
         );
-
 
         $this->SetValue(
             'Status',
@@ -98,23 +84,18 @@ class ScreenLineMB32Controller extends IPSModule
         );
     }
 
-
-
     public function RequestAction(
         $Ident,
         $Value
     )
     {
-
         if ($Ident === 'Position') {
 
             $this->MoveTo(
-                (float)$Value
+                (float) $Value
             );
         }
     }
-
-
 
     private function MoveTo(
         float $target
@@ -125,26 +106,28 @@ class ScreenLineMB32Controller extends IPSModule
                 'CurrentPosition'
             );
 
-
         if ($target < 0 || $target > 100) {
             return;
         }
 
-
         $relay = new RelayEngine(
             $this,
-            $this->ReadPropertyInteger('RelayUp'),
-            $this->ReadPropertyInteger('RelayDown'),
-            $this->ReadPropertyInteger('SwitchPause')
+            $this->ReadPropertyInteger(
+                'RelayUpStatusID'
+            ),
+            $this->ReadPropertyInteger(
+                'RelayDownStatusID'
+            ),
+            $this->ReadPropertyInteger(
+                'SwitchPause'
+            )
         );
-
 
         $this->movement =
             new MovementEngine(
                 $this,
                 $relay
             );
-
 
         if ($target > $current) {
 
@@ -165,22 +148,20 @@ class ScreenLineMB32Controller extends IPSModule
                 );
         }
 
-
-        if (!$this->movement->Start(
-            $current,
-            $target,
-            $runtime
-        )) {
-
+        if (
+            !$this->movement->Start(
+                $current,
+                $target,
+                $runtime
+            )
+        ) {
             return;
         }
-
 
         $this->SetTimerInterval(
             'MovementTimer',
             500
         );
-
 
         $this->SetValue(
             'Status',
@@ -188,38 +169,30 @@ class ScreenLineMB32Controller extends IPSModule
         );
     }
 
-
-
     public function UpdateMovement(): void
     {
-
         if ($this->movement === null) {
             return;
         }
 
-
         static $elapsed = 0;
 
         $elapsed += 0.5;
-
 
         $position =
             $this->movement->CalculatePosition(
                 $elapsed
             );
 
-
         $this->WriteAttributeFloat(
             'CurrentPosition',
             $position
         );
 
-
         $this->SetValue(
             'Position',
-            (int)$position
+            (int) $position
         );
-
 
         if (
             $elapsed >=
@@ -228,30 +201,25 @@ class ScreenLineMB32Controller extends IPSModule
 
             $this->movement->Stop();
 
-
             $this->WriteAttributeFloat(
                 'CurrentPosition',
                 $this->movement->GetTarget()
             );
-
 
             $this->SetTimerInterval(
                 'MovementTimer',
                 0
             );
 
-
             $this->SetValue(
                 'Position',
-                (int)$this->movement->GetTarget()
+                (int) $this->movement->GetTarget()
             );
-
 
             $this->SetValue(
                 'Status',
                 'Position erreicht'
             );
-
 
             $elapsed = 0;
         }
