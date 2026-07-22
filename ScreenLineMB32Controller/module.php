@@ -203,7 +203,7 @@ class ScreenLineMB32Controller extends IPSModule
             // Prüfen, ob eine ShakeFree-Sequenz aktiv ist
             $coldStep = $this->ReadAttributeInteger('ShakeFreeStep');
             if ($coldStep > 0) {
-                $this->AdvanceShakeFreeSequence(100.0); // 100% ist das definierte Endziel von ShakeFree
+                $this->AdvanceShakeFreeSequence(100.0); 
             } else {
                 $this->SetTimerInterval('MovementTimer', 0);
                 $this->WriteAttributeInteger('CurrentDirection', 0);
@@ -219,4 +219,28 @@ class ScreenLineMB32Controller extends IPSModule
 
         $shake = new ShakeFree($this, $this->ReadPropertyBoolean('ShakeFreeEnabled'), $this->ReadPropertyFloat('ShakeFreeDuration'));
         $nextTarget = $shake->GetNextSequenceTarget($nextStep, $finalTarget);
+
+                if ($nextTarget !== null) {
+            $this->WriteAttributeInteger('ShakeFreeStep', $nextStep);
+            $this->SetValue('Status', 'Shake-Free Phase ' . $nextStep);
+            
+            $this->SetTimerInterval('MovementTimer', 0); 
+            $this->MoveTo($nextTarget);
+        } else {
+            $this->WriteAttributeInteger('ShakeFreeStep', 0);
+            $this->WriteAttributeInteger('CurrentDirection', 0);
+            $this->SetTimerInterval('MovementTimer', 0);
+            $this->SetValue('Status', 'Position erreicht');
+        }
+    }
+
+    public function ReferenceClosed(): void
+    {
+        $tracking = new TrackingEngine($this, $this->ReadPropertyFloat('RuntimeUp'), $this->ReadPropertyFloat('RuntimeDown'));
+        $tracking->ReferenceClosed();
+        $this->WriteAttributeFloat('CurrentPosition', 0.0);
+        $this->SetValue('Position', 0);
+        $this->SetValue('Status', 'Referenz geschlossen gespeichert');
+    }
+}
 
