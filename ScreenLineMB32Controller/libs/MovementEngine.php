@@ -43,7 +43,9 @@ final class MovementEngine
 
         $this->running = true;
 
-        $this->module->SendDebug(
+        // KORREKTUR: Nutzung von IPS_SendDebug über den Instanz-Getter zur Vermeidung von Sichtbarkeitsfehlern
+        IPS_SendDebug(
+            $this->module->GetModuleInstanceID(),
             'MovementEngine',
             sprintf('Start %.1f -> %.1f (%.1fs)', $current, $target, $runtime),
             0
@@ -56,7 +58,7 @@ final class MovementEngine
     {
         $this->relay->Stop();
         $this->running = false;
-        $this->module->SendDebug('MovementEngine', 'Bewegung beendet', 0);
+        IPS_SendDebug($this->module->GetModuleInstanceID(), 'MovementEngine', 'Bewegung beendet', 0);
     }
 
     public function IsRunning(): bool
