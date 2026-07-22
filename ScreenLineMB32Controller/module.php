@@ -34,6 +34,13 @@ class ScreenLineMB32Controller extends IPSModule
         $this->RegisterVariableInteger('Position', 'Position', '~Intensity.100', 10);
         $this->EnableAction('Position');
         
+        // Prüfen, ob das Profil existiert, andernfalls erstellen wir es selbst
+        if (!IPS_VariableProfileExists('~SlatPosition')) {
+            IPS_CreateVariableProfile('~SlatPosition', 1); // 1 = Integer
+            IPS_SetVariableProfileValues('~SlatPosition', 0, 100, 1);
+            IPS_SetVariableProfileText('~SlatPosition', '%', ' %');
+        }
+
         $this->RegisterVariableInteger('SlatPosition', 'Lamelle', '~SlatPosition', 15);
         $this->EnableAction('SlatPosition');
         
