@@ -18,29 +18,12 @@ final class LCNAdapter
     ): bool {
 
         if ($outputID <= 0) {
-
-            $this->module->SendDebug(
-                'LCNAdapter',
-                'Ungültige Ausgangs-ID',
-                0
-            );
-
             return false;
         }
 
         LCN_SwitchRelay(
             $outputID,
             $state
-        );
-
-        $this->module->SendDebug(
-            'LCNAdapter',
-            sprintf(
-                'Relais %d -> %s',
-                $outputID,
-                $state ? 'EIN' : 'AUS'
-            ),
-            0
         );
 
         return true;
@@ -52,6 +35,7 @@ final class LCNAdapter
     ): void {
 
         if ($relayUp > 0) {
+
             LCN_SwitchRelay(
                 $relayUp,
                 false
@@ -59,6 +43,7 @@ final class LCNAdapter
         }
 
         if ($relayDown > 0) {
+
             LCN_SwitchRelay(
                 $relayDown,
                 false
