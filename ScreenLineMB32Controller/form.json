@@ -76,22 +76,22 @@
         {
             "type": "Button",
             "caption": "Test: Fahre auf 0% (Ganz OBEN)",
-            "onClick": "SLMB32_MoveTo($InstanceID, 0);"
+            "onClick": "SLMB32_MoveTo($id, 0);"
         },
         {
             "type": "Button",
             "caption": "Test: Fahre auf 50% (Mitte)",
-            "onClick": "SLMB32_MoveTo($InstanceID, 50);"
+            "onClick": "SLMB32_MoveTo($id, 50);"
         },
         {
             "type": "Button",
             "caption": "Test: Fahre auf 100% (Ganz UNTEN)",
-            "onClick": "SLMB32_MoveTo($InstanceID, 100);"
+            "onClick": "SLMB32_MoveTo($id, 100);"
         },
         {
             "type": "Button",
             "caption": "Referenzieren (Geschlossen)",
-            "onClick": "SLMB32_ReferenceClosed($InstanceID);"
+            "onClick": "SLMB32_ReferenceClosed($id);"
         }
     ]
 }
