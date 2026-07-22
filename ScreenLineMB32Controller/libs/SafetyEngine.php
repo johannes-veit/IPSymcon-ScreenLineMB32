@@ -26,14 +26,15 @@ final class SafetyEngine
         $this->lastStartTime = microtime(true);
         $this->running = true;
 
-        $this->module->SendDebug('SafetyEngine', 'Fahrüberwachung gestartet', 0);
+        // KORREKTUR: Nutzung der öffentlichen Getter-Methode zur Vermeidung des Sichtbarkeitsfehlers
+        IPS_SendDebug($this->module->GetModuleInstanceID(), 'SafetyEngine', 'Fahrüberwachung gestartet', 0);
         return $this->lastStartTime; 
     }
 
     public function Stop(): void
     {
         $this->running = false;
-        $this->module->SendDebug('SafetyEngine', 'Fahrüberwachung beendet', 0);
+        IPS_SendDebug($this->module->GetModuleInstanceID(), 'SafetyEngine', 'Fahrüberwachung beendet', 0);
     }
 
     public function IsTimeout(): bool
@@ -45,7 +46,7 @@ final class SafetyEngine
         $runtime = microtime(true) - $this->lastStartTime;
 
         if ($runtime > $this->maxRuntime) {
-            $this->module->SendDebug('SafetyEngine', sprintf('TIMEOUT: Maximale Fahrzeit überschritten (%.1fs > %.1fs)', $runtime, $this->maxRuntime), 0);
+            IPS_SendDebug($this->module->GetModuleInstanceID(), 'SafetyEngine', sprintf('TIMEOUT: Maximale Fahrzeit überschritten (%.1fs > %.1fs)', $runtime, $this->maxRuntime), 0);
             return true;
         }
 
@@ -60,12 +61,12 @@ final class SafetyEngine
     public function ValidateRelayCombination(int $up, int $down): bool 
     {
         if ($up <= 0 || $down <= 0) {
-            $this->module->SendDebug('SafetyEngine', 'Validierungsfehler: Instanz-IDs fehlen.', 0);
+            IPS_SendDebug($this->module->GetModuleInstanceID(), 'SafetyEngine', 'Validierungsfehler: Instanz-IDs fehlen.', 0);
             return false;
         }
 
         if ($up === $down) {
-            $this->module->SendDebug('SafetyEngine', 'Validierungsfehler: Relais für AUF und AB sind identisch!', 0);
+            IPS_SendDebug($this->module->GetModuleInstanceID(), 'SafetyEngine', 'Validierungsfehler: Relais für AUF und AB sind identisch!', 0);
             return false;
         }
 
@@ -76,6 +77,6 @@ final class SafetyEngine
     {
         $this->running = false;
         $relay->Stop(); 
-        $this->module->SendDebug('SafetyEngine', 'Sicherheitsstopp ausgeführt', 0);
+        IPS_SendDebug($this->module->GetModuleInstanceID(), 'SafetyEngine', 'Sicherheitsstopp ausgeführt', 0);
     }
 }
