@@ -1,116 +1,35 @@
 {
     "elements": [
         {
-            "type": "Label",
-            "caption": "ScreenLine MB32 Controller"
+            "type": "ValidationTextBox",
+            "name": "RelayUp",
+            "caption": "Relais AUF (Instanz-ID)"
         },
+        {
+            "type": "ValidationTextBox",
+            "name": "RelayDown",
+            "caption": "Relais AB (Instanz-ID)"
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "RuntimeUp",
+            "caption": "Laufzeit AUF (Sekunden)"
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "RuntimeDown",
+            "caption": "Laufzeit AB (Sekunden)"
+        },
+        {
+            "type": "NumberSpinner",
+            "name": "SwitchPause",
+            "caption": "Umschaltpause (ms)"
+        }
+    ],
+    "actions": [
         {
             "type": "Label",
-            "caption": "Schritt für Schritt Einrichtung der ScreenLine MB32 Jalousie."
-        },
-        {
-            "type": "ExpansionPanel",
-            "caption": "1. Statusvariablen auswählen",
-            "items": [
-                {
-                    "type": "NumberSpinner",
-                    "name": "RelayUpStatusID",
-                    "caption": "Statusvariable AUF",
-                    "minimum": 0,
-                    "maximum": 65535,
-                    "hint": "ID der Statusvariable des LCN-Relais für die Aufwärtsfahrt."
-                },
-                {
-                    "type": "NumberSpinner",
-                    "name": "RelayDownStatusID",
-                    "caption": "Statusvariable AB",
-                    "minimum": 0,
-                    "maximum": 65535,
-                    "hint": "ID der Statusvariable des LCN-Relais für die Abwärtsfahrt."
-                }
-            ]
-        },
-        {
-            "type": "ExpansionPanel",
-            "caption": "2. Motorlaufzeiten einstellen",
-            "items": [
-                {
-                    "type": "NumberSpinner",
-                    "name": "RuntimeUp",
-                    "caption": "Laufzeit AUF",
-                    "suffix": " Sekunden",
-                    "minimum": 1,
-                    "maximum": 600,
-                    "hint": "Zeit, die der Motor benötigt, um vollständig nach oben zu fahren."
-                },
-                {
-                    "type": "NumberSpinner",
-                    "name": "RuntimeDown",
-                    "caption": "Laufzeit AB",
-                    "suffix": " Sekunden",
-                    "minimum": 1,
-                    "maximum": 600,
-                    "hint": "Zeit, die der Motor benötigt, um vollständig nach unten zu fahren."
-                }
-            ]
-        },
-        {
-            "type": "ExpansionPanel",
-            "caption": "3. Sicherheit",
-            "items": [
-                {
-                    "type": "NumberSpinner",
-                    "name": "SwitchPause",
-                    "caption": "Umschaltpause",
-                    "suffix": " Millisekunden",
-                    "minimum": 100,
-                    "maximum": 3000,
-                    "hint": "Pause zwischen AUF und AB. Beide Relais sind während dieser Zeit ausgeschaltet."
-                },
-                {
-                    "type": "NumberSpinner",
-                    "name": "MotorTimeout",
-                    "caption": "Maximale Fahrzeit",
-                    "suffix": " Sekunden",
-                    "minimum": 10,
-                    "maximum": 900,
-                    "hint": "Sicherheitsabschaltung, falls ein Motor unerwartet weiterläuft."
-                }
-            ]
-        },
-        {
-            "type": "ExpansionPanel",
-            "caption": "4. ScreenLine MB32 Funktionen",
-            "items": [
-                {
-                    "type": "CheckBox",
-                    "name": "ShakeFreeEnabled",
-                    "caption": "Shake Free aktivieren",
-                    "hint": "Nach einer Abwärtsfahrt wird die Shake-Free-Bewegung ausgeführt."
-                },
-                {
-                    "type": "NumberSpinner",
-                    "name": "ShakeFreeDuration",
-                    "caption": "Shake Free Zeit",
-                    "suffix": " Sekunden",
-                    "minimum": 0.5,
-                    "maximum": 10,
-                    "hint": "Dauer der kurzen Shake-Free-Bewegung."
-                }
-            ]
-        },
-        {
-            "type": "ExpansionPanel",
-            "caption": "5. Erweiterte Einstellungen",
-            "visible": false,
-            "items": [
-                {
-                    "type": "CheckBox",
-                    "name": "EnableDiagnostics",
-                    "caption": "Diagnose aktivieren",
-                    "hint": "Zeigt zusätzliche technische Informationen."
-                }
-            ]
+            "caption": "Bitte die Instanz-IDs der beiden LCN-Relais eintragen."
         }
     ]
 }
