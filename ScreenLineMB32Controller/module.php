@@ -34,7 +34,7 @@ class ScreenLineMB32Controller extends IPSModule
         $this->RegisterVariableInteger('Position', 'Position', '~Intensity.100', 10);
         $this->EnableAction('Position');
 
-        // Eigenes Profil ohne Tilde anlegen, falls es fehlt
+        // Profil absichern ohne Tilde
         if (!IPS_VariableProfileExists('SlatPosition')) {
             IPS_CreateVariableProfile('SlatPosition', 1);
             IPS_SetVariableProfileValues('SlatPosition', 0, 100, 1);
@@ -63,30 +63,89 @@ class ScreenLineMB32Controller extends IPSModule
         
         // Attribute zur Stillstands-Überwachung für den Standby-Modus
         $this->RegisterAttributeFloat('LastLoggedPosition', -1.0);
-        $this->RegisterAttributeFloat('StaticPositionDuration', 0.0);
+        $this->WriteAttributeFloat('StaticPositionDuration', 0.0);
 
         // Zustands-Verwaltung für die Zwischenstopp-Sequenz
         $this->RegisterAttributeInteger('IntermediateShakeStep', 0);
         $this->RegisterAttributeFloat('IntermediateShakeRemaining', 0.0);
         $this->RegisterAttributeInteger('OriginalDirection', 0);
 
-        // KORREKTUR: Systemkonformer Timer-Aufruf über IPS_RequestAction anstatt des alten, ungültigen Präfixes
+        // Timer-Aufruf korrigiert
         $this->RegisterTimer('MovementTimer', 0, 'IPS_RequestAction($_IPS[\'TARGET\'], "UpdateMovement", 0);');
     }
 
     public function ApplyChanges(): void
     {
         parent::ApplyChanges();
+        $this->UnregisterAllMessages();
 
-        $this->LogMessage('ApplyChanges läuft', KL_NOTIFY);
+        $relayUp = $this->ReadPropertyInteger('RelayUp');
+        $relayDown = $this->ReadPropertyInteger('ReadPropertyInteger');
+
+        // Bidirektionales LCN-Relais Tracking aktivieren
+        if ($relayUp > 0 && IPS_InstanceExists($relayUp)) {
+            $upStatusID = @IPS_GetObjectIDByIdent('Status', $relayUp);
+            if ($upStatusID > 0) {
+                $this->RegisterMessage($upStatusID, VM_UPDATE);
+            }
+        }
+        if ($relayDown > 0 && IPS_InstanceExists($relayDown)) {
+            $downStatusID = @IPS_GetObjectIDByIdent('Status', $relayDown);
+            if ($downStatusID > 0) {
+                $this->RegisterMessage($downStatusID, VM_UPDATE);
+            }
+        }
+
         $this->SetTimerInterval('MovementTimer', 0);
         $this->SetValue('Status', 'Bereit');
     }
+    public function MessageSink($TimeStamp, $SenderID, $Message, $Data): void
+    {
+        if ($Message !== VM_UPDATE) {
+            return;
+        }
+
+        $relayUp = $this->ReadPropertyInteger('RelayUp');
+        $relayDown = $this->ReadPropertyInteger('RelayDown');
+        
+        $upStatusID = @IPS_GetObjectIDByIdent('Status', $relayUp);
+        $downStatusID = @IPS_GetObjectIDByIdent('Status', $relayDown);
+
+        $isRelayUpActive = ($upStatusID > 0) ? GetValueBoolean($upStatusID) : false;
+        $isRelayDownActive = ($downStatusID > 0) ? GetValueBoolean($downStatusID) : false;
+        $timerInterval = $this->GetTimerInterval('MovementTimer');
+
+        // Externe Hardwarefahrt über LCN erkannt -> Tracking aufwecken
+        if (($isRelayUpActive || $isRelayDownActive) && $timerInterval === 0) {
+            $direction = $isRelayDownActive ? TrackingEngine::DIRECTION_DOWN : TrackingEngine::DIRECTION_UP;
+            $current = $this->ReadAttributeFloat('CurrentPosition');
+            $currentSlat = $this->ReadAttributeFloat('CurrentSlatPosition');
+            $target = ($direction === TrackingEngine::DIRECTION_DOWN) ? 100.0 : 0.0;
+
+            $slatTime = ($direction === TrackingEngine::DIRECTION_DOWN) 
+                ? (((100.0 - $currentSlat) / 100.0) * $this->ReadPropertyFloat('SlatTurnTime'))
+                : (($currentSlat / 100.0) * $this->ReadPropertyFloat('SlatTurnTime'));
+            
+            $softTime = $this->ReadPropertyFloat('SoftStartTime');
+
+            $this->WriteAttributeInteger('CurrentDirection', $direction);
+            $this->WriteAttributeFloat('TargetPosition', $target);
+            $this->WriteAttributeFloat('LastTimestamp', microtime(true));
+            $this->WriteAttributeFloat('RemainingSlatTime', $slatTime);
+            $this->WriteAttributeFloat('RemainingSoftStartTime', $softTime);
+            $this->WriteAttributeFloat('OverrunRemainingTime', 0.0);
+            $this->WriteAttributeBoolean('IsSlatOnlyMove', false);
+            $this->WriteAttributeFloat('LastLoggedPosition', $current);
+            $this->WriteAttributeFloat('StaticPositionDuration', 0.0);
+            $this->WriteAttributeInteger('IntermediateShakeStep', 0);
+
+            $this->SetTimerInterval('MovementTimer', 500);
+            $this->SetValue('Status', 'LCN-Fahrt läuft...');
+        }
+    }
+
     public function RequestAction($Ident, $Value): void
     {
-        $this->SendDebug('RequestAction', sprintf('Ident=%s Value=%s', (string)$Ident, (string)$Value), 0);
-
-        // KORREKTUR: RequestAction verarbeitet nun BEIDE Regler (Höhe und Lamelle) aus der Visu
         if ($Ident === 'Position') {
             $this->MoveTo((float)$Value);
         } elseif ($Ident === 'SlatPosition') {
@@ -102,54 +161,38 @@ class ScreenLineMB32Controller extends IPSModule
         $current = $this->ReadAttributeFloat('CurrentPosition');
         $currentSlat = $this->ReadAttributeFloat('CurrentSlatPosition');
 
-        if ($target < 0.0 || $target > 100.0) {
-            $this->SendDebug('MoveTo', 'Ungültiges Ziel', 0);
-            return;
-        }
+        if ($target < 0.0 || $target > 100.0) return;
 
         $relayUp = $this->ReadPropertyInteger('RelayUp');
         $relayDown = $this->ReadPropertyInteger('RelayDown');
         if ($relayUp <= 0 || $relayDown <= 0 || !IPS_InstanceExists($relayUp) || !IPS_InstanceExists($relayDown)) {
-            $this->SetValue('Status', 'Fehler: Ungültige Relais');
+            $this->SetValue('Status', 'Fehler: Relais fehlen');
             return;
         }
 
-        // Manueller Zwischenstopp im WebFront/App
         if ($this->GetTimerInterval('MovementTimer') > 0 && abs($current - $target) < 0.1) {
             $relay = new RelayEngine($this, $relayUp, $relayDown, $this->ReadPropertyInteger('SwitchPause'));
-            
             if ($this->ReadPropertyBoolean('IntermediateShakeEnabled') && $this->ReadAttributeInteger('IntermediateShakeStep') === 0) {
                 $this->TriggerIntermediateShake();
                 return;
             }
-
             $relay->Stop(); 
             $this->SetTimerInterval('MovementTimer', 0); 
-            $this->WriteAttributeBoolean('SafetyRunning', false);
             $this->WriteAttributeInteger('CurrentDirection', 0);
-            $this->WriteAttributeInteger('ShakeFreeStep', 0);
             $this->WriteAttributeInteger('IntermediateShakeStep', 0);
-            $this->WriteAttributeFloat('OverrunRemainingTime', 0.0);
             $this->SetValue('Status', 'Standby: Manueller Stopp');
             return;
         }
 
         $shake = new ShakeFree($this, $this->ReadPropertyBoolean('ShakeFreeEnabled'), $this->ReadPropertyFloat('ShakeFreeDuration'));
         $realTarget = $target;
-        if ($shake->IsEnabled() && $shake->Validate() && $target === 100.0 && $this->ReadAttributeInteger('ShakeFreeStep') === 0) {
+        if ($shake->IsEnabled() && $target === 100.0 && $this->ReadAttributeInteger('ShakeFreeStep') === 0) {
             $this->WriteAttributeInteger('ShakeFreeStep', 1);
-            $this->SetValue('Status', 'Shake-Free gestartet');
             $sequenceTarget = $shake->GetNextSequenceTarget(1, $target);
-            if ($sequenceTarget !== null) {
-                $realTarget = $sequenceTarget;
-            }
+            if ($sequenceTarget !== null) $realTarget = $sequenceTarget;
         }
 
         if ($current === $realTarget && $realTarget !== 100.0 && $realTarget !== 0.0) {
-            if ($this->ReadAttributeInteger('ShakeFreeStep') > 0) {
-                $this->AdvanceShakeFreeSequence($target);
-                return;
-            }
             if ($this->ReadPropertyBoolean('IntermediateShakeEnabled') && $this->ReadAttributeInteger('IntermediateShakeStep') === 0) {
                 $this->TriggerIntermediateShake();
                 return;
@@ -159,33 +202,21 @@ class ScreenLineMB32Controller extends IPSModule
         }
 
         $newDirection = ($realTarget > $current || ($current === 100.0 && $realTarget === 100.0)) ? TrackingEngine::DIRECTION_DOWN : TrackingEngine::DIRECTION_UP;
-        
-        $slatTime = 0.0;
-        if ($newDirection === TrackingEngine::DIRECTION_DOWN) {
-            $slatTime = ((100.0 - $currentSlat) / 100.0) * $this->ReadPropertyFloat('SlatTurnTime');
-        } else {
-            $slatTime = ($currentSlat / 100.0) * $this->ReadPropertyFloat('SlatTurnTime');
-        }
+        $slatTime = ($newDirection === TrackingEngine::DIRECTION_DOWN)
+            ? (((100.0 - $currentSlat) / 100.0) * $this->ReadPropertyFloat('SlatTurnTime'))
+            : (($currentSlat / 100.0) * $this->ReadPropertyFloat('SlatTurnTime'));
         
         $softTime = $this->ReadPropertyFloat('SoftStartTime');
         $overrunTime = ($realTarget === 100.0 || $realTarget === 0.0) ? 5.0 : 0.0;
 
         $relay = new RelayEngine($this, $relayUp, $relayDown, $this->ReadPropertyInteger('SwitchPause'));
         $movement = new MovementEngine($this, $relay);
-
         $tracking = new TrackingEngine($this, $this->ReadPropertyFloat('RuntimeUp'), $this->ReadPropertyFloat('RuntimeDown'), $slatTime, $softTime);
         $tracking->Rehydrate($current, $currentSlat, microtime(true), $slatTime, $softTime);
         $runtime = $tracking->EstimateRuntime($realTarget) + $overrunTime;
 
         $safety = new SafetyEngine($this, $runtime + 10.0);
-        if (!$safety->ValidateRuntime($runtime)) {
-            $this->SetValue('Status', 'Fehler: Validierung fehlgeschlagen');
-            return;
-        }
-
-        if (!$movement->Start($current, $realTarget, $runtime)) {
-            return;
-        }
+        if (!$movement->Start($current, $realTarget, $runtime)) return;
 
         $this->WriteAttributeInteger('CurrentDirection', $newDirection);
         $this->WriteAttributeFloat('TargetPosition', $realTarget);
@@ -194,47 +225,33 @@ class ScreenLineMB32Controller extends IPSModule
         $this->WriteAttributeFloat('RemainingSoftStartTime', $softTime);
         $this->WriteAttributeFloat('OverrunRemainingTime', $overrunTime);
         $this->WriteAttributeBoolean('IsSlatOnlyMove', false);
-        
         $this->WriteAttributeFloat('LastLoggedPosition', $current);
         $this->WriteAttributeFloat('StaticPositionDuration', 0.0);
-        $this->WriteAttributeInteger('IntermediateShakeStep', 0);
 
-        $safetyStartTime = $safety->Start();
-        $this->WriteAttributeFloat('SafetyStartTime', $safetyStartTime);
+        $safety->Start();
+        $this->WriteAttributeFloat('SafetyStartTime', microtime(true));
         $this->WriteAttributeBoolean('SafetyRunning', true);
-
         $this->SetTimerInterval('MovementTimer', 500);
         $this->SetValue('Status', 'Anlauf...');
     }
     public function MoveSlatTo(float $targetSlat): void
     {
-        $this->SendDebug('MoveSlatTo', 'Ziel Lamelle=' . $targetSlat, 0);
         $currentSlat = $this->ReadAttributeFloat('CurrentSlatPosition');
         $currentPos = $this->ReadAttributeFloat('CurrentPosition');
-
-        if ($targetSlat < 0.0 || $targetSlat > 100.0 || $currentSlat === $targetSlat) {
-            return;
-        }
+        if ($targetSlat < 0.0 || $targetSlat > 100.0 || $currentSlat === $targetSlat) return;
 
         $relayUp = $this->ReadPropertyInteger('RelayUp');
         $relayDown = $this->ReadPropertyInteger('RelayDown');
-        if ($relayUp <= 0 || $relayDown <= 0 || !IPS_InstanceExists($relayUp) || !IPS_InstanceExists($relayDown)) {
-            return;
-        }
+        if ($relayUp <= 0 || $relayDown <= 0) return;
 
         $direction = ($targetSlat > $currentSlat) ? TrackingEngine::DIRECTION_DOWN : TrackingEngine::DIRECTION_UP;
-        
-        $slatDiff = abs($targetSlat - $currentSlat) / 100.0;
-        $slatTime = $slatDiff * $this->ReadPropertyFloat('SlatTurnTime');
+        $slatTime = (abs($targetSlat - $currentSlat) / 100.0) * $this->ReadPropertyFloat('SlatTurnTime');
         $softTime = $this->ReadPropertyFloat('SoftStartTime');
         $totalRuntime = $slatTime + $softTime;
 
         $relay = new RelayEngine($this, $relayUp, $relayDown, $this->ReadPropertyInteger('SwitchPause'));
         $movement = new MovementEngine($this, $relay);
-
-        if (!$movement->Start($currentPos, $currentPos, $totalRuntime)) {
-            return;
-        }
+        if (!$movement->Start($currentPos, $currentPos, $totalRuntime)) return;
 
         $this->WriteAttributeInteger('CurrentDirection', $direction);
         $this->WriteAttributeFloat('TargetSlatPosition', $targetSlat);
@@ -242,11 +259,6 @@ class ScreenLineMB32Controller extends IPSModule
         $this->WriteAttributeFloat('RemainingSlatTime', $slatTime);
         $this->WriteAttributeFloat('RemainingSoftStartTime', $softTime);
         $this->WriteAttributeBoolean('IsSlatOnlyMove', true);
-
-        $safety = new SafetyEngine($this, $totalRuntime + 5.0);
-        $safetyStartTime = $safety->Start();
-        $this->WriteAttributeFloat('SafetyStartTime', $safetyStartTime);
-        $this->WriteAttributeBoolean('SafetyRunning', true);
 
         $this->SetTimerInterval('MovementTimer', 500);
         $this->SetValue('Status', 'Lamelle dreht...');
@@ -258,19 +270,11 @@ class ScreenLineMB32Controller extends IPSModule
         $relayDown = $this->ReadPropertyInteger('RelayDown');
         $duration = $this->ReadPropertyFloat('IntermediateShakeDuration');
         $currentDir = $this->ReadAttributeInteger('CurrentDirection');
-
-        if ($currentDir === 0) {
-            return;
-        }
+        if ($currentDir === 0) return;
 
         $shakeDirection = ($currentDir === TrackingEngine::DIRECTION_DOWN) ? TrackingEngine::DIRECTION_UP : TrackingEngine::DIRECTION_DOWN;
-        
         $relay = new RelayEngine($this, $relayUp, $relayDown, $this->ReadPropertyInteger('SwitchPause'));
-        if ($shakeDirection === TrackingEngine::DIRECTION_DOWN) {
-            $relay->MoveDown();
-        } else {
-            $relay->MoveUp();
-        }
+        if ($shakeDirection === TrackingEngine::DIRECTION_DOWN) $relay->MoveDown(); else $relay->MoveUp();
 
         $this->WriteAttributeInteger('OriginalDirection', $currentDir);
         $this->WriteAttributeInteger('IntermediateShakeStep', 1);
@@ -284,11 +288,7 @@ class ScreenLineMB32Controller extends IPSModule
     {
         $relayUp = $this->ReadPropertyInteger('RelayUp');
         $relayDown = $this->ReadPropertyInteger('RelayDown');
-
-        if ($relayUp <= 0 || $relayDown <= 0 || !IPS_InstanceExists($relayUp) || !IPS_InstanceExists($relayDown)) {
-            $this->SetTimerInterval('MovementTimer', 0);
-            return;
-        }
+        if ($relayUp <= 0 || $relayDown <= 0) return;
 
         $direction = $this->ReadAttributeInteger('CurrentDirection');
         $target = $this->ReadAttributeFloat('TargetPosition');
@@ -300,7 +300,6 @@ class ScreenLineMB32Controller extends IPSModule
         $remSoft = $this->ReadAttributeFloat('RemainingSoftStartTime');
         $overrun = $this->ReadAttributeFloat('OverrunRemainingTime');
         $isSlatOnly = $this->ReadAttributeBoolean('IsSlatOnlyMove');
-        
         $lastLoggedPos = $this->ReadAttributeFloat('LastLoggedPosition');
         $staticDuration = $this->ReadAttributeFloat('StaticPositionDuration');
 
@@ -311,11 +310,9 @@ class ScreenLineMB32Controller extends IPSModule
         $now = microtime(true);
         $elapsed = $now - $lastTimestamp;
 
-        // HARDWARE-RÜCKLESUNG FÜR LCN R6 RELAISSTATUS (GT8 PHYSISCHER STOPP)
+        // Hardware-Abgleich mit der LCN R6 Koppelrelais-Ebene
         $activeRelayID = ($direction === TrackingEngine::DIRECTION_DOWN) ? $relayDown : $relayUp;
-        if ($intShakeStep === 1) {
-            $activeRelayID = ($origDir === TrackingEngine::DIRECTION_DOWN) ? $relayUp : $relayDown;
-        }
+        if ($intShakeStep === 1) $activeRelayID = ($origDir === TrackingEngine::DIRECTION_DOWN) ? $relayUp : $relayDown;
         
         $hardwareState = false;
         if (IPS_VariableExists(IPS_GetObjectIDByIdent('Status', $activeRelayID))) {
@@ -326,45 +323,36 @@ class ScreenLineMB32Controller extends IPSModule
             $relay = new RelayEngine($this, $relayUp, $relayDown, $this->ReadPropertyInteger('SwitchPause'));
             $relay->Stop();
             $this->SetTimerInterval('MovementTimer', 0);
-            $this->WriteAttributeBoolean('SafetyRunning', false);
             $this->WriteAttributeInteger('CurrentDirection', 0);
             $this->WriteAttributeInteger('ShakeFreeStep', 0);
             $this->WriteAttributeInteger('IntermediateShakeStep', 0);
-            $this->WriteAttributeFloat('OverrunRemainingTime', 0.0);
-            $this->SetValue('Status', 'Standby: GT8 Taster Stopp');
+            
+            if ($this->ReadPropertyBoolean('IntermediateShakeEnabled') && $intShakeStep === 0 && $current > 0.5 && $current < 99.5) {
+                $this->TriggerIntermediateShake();
+                return;
+            }
+            $this->SetValue('Status', 'Standby: Hardware-Stopp');
             return;
         }
 
-        $relay = new RelayEngine($this, $relayUp, $relayDown, $this->ReadPropertyInteger('SwitchPause'));
-
-        // ZWISCHENSTOPP-SHAKE-FREE SCHLEIFENVERARBEITUNG
         if ($intShakeStep > 0) {
-            if ($elapsed >= $intShakeRem) {
-                $intShakeRem = 0.0;
-            } else {
-                $intShakeRem -= $elapsed;
-            }
+            $intShakeRem = max(0.0, $intShakeRem - $elapsed);
             $this->WriteAttributeFloat('IntermediateShakeRemaining', $intShakeRem);
             $this->WriteAttributeFloat('LastTimestamp', microtime(true));
 
             if ($intShakeRem <= 0.0) {
+                $relay = new RelayEngine($this, $relayUp, $relayDown, $this->ReadPropertyInteger('SwitchPause'));
                 if ($intShakeStep === 1) {
-                    if ($origDir === TrackingEngine::DIRECTION_DOWN) {
-                        $relay->MoveDown();
-                    } else {
-                        $relay->MoveUp();
-                    }
+                    if ($origDir === TrackingEngine::DIRECTION_DOWN) $relay->MoveDown(); else $relay->MoveUp();
                     $this->WriteAttributeInteger('IntermediateShakeStep', 2);
                     $this->WriteAttributeFloat('IntermediateShakeRemaining', $this->ReadPropertyFloat('IntermediateShakeDuration'));
                     $this->SetValue('Status', 'Zwischen-Shake Phase 2...');
-                    return;
                 } else {
                     $relay->Stop();
                     $this->SetTimerInterval('MovementTimer', 0);
                     $this->WriteAttributeInteger('CurrentDirection', 0);
                     $this->WriteAttributeInteger('IntermediateShakeStep', 0);
                     $this->SetValue('Status', 'Position erreicht');
-                    return;
                 }
             }
             return; 
@@ -374,11 +362,7 @@ class ScreenLineMB32Controller extends IPSModule
 
         if ($isAtEndstop && $overrun > 0.0 && !$isSlatOnly) {
             $isOverrunPhaseActive = true;
-            if ($elapsed >= $overrun) {
-                $overrun = 0.0;
-            } else {
-                $overrun -= $elapsed;
-            }
+            $overrun = max(0.0, $overrun - $elapsed);
             $this->WriteAttributeFloat('OverrunRemainingTime', $overrun);
             $this->WriteAttributeFloat('LastTimestamp', microtime(true));
             $this->SetValue('Status', sprintf('Nachlauf aktiv (noch %.1fs)...', $overrun));
@@ -386,18 +370,14 @@ class ScreenLineMB32Controller extends IPSModule
             $tracking = new TrackingEngine($this, $this->ReadPropertyFloat('RuntimeUp'), $this->ReadPropertyFloat('RuntimeDown'), $remSlat, $remSoft);
             $tracking->Rehydrate($current, $currentSlat, $lastTimestamp, $remSlat, $remSoft);
             
-            // Erweiterter Fahrbefehl (Berücksichtigt reine Lamellenänderungen)
             if ($isSlatOnly) {
                 if ($remSoft <= 0.0 && $remSlat > 0.0) {
                     $allocatedTime = min($elapsed, $remSlat);
                     $remSlat -= $allocatedTime;
-                    $totalSlatTime = max(0.1, (float)$this->ReadPropertyFloat('SlatTurnTime'));
-                    $slatDelta = ($allocatedTime / $totalSlatTime) * 100.0;
+                    $slatDelta = ($allocatedTime / max(0.1, (float)$this->ReadPropertyFloat('SlatTurnTime'))) * 100.0;
                     $currentSlat = ($direction === TrackingEngine::DIRECTION_DOWN) ? ($currentSlat + $slatDelta) : ($currentSlat - $slatDelta);
                 }
-                if ($remSoft > 0.0) {
-                    $remSoft = max(0.0, $remSoft - $elapsed);
-                }
+                $remSoft = max(0.0, $remSoft - $elapsed);
                 $newPos = $current;
                 $newSlat = min(100.0, max(0.0, $currentSlat));
             } else {
@@ -418,7 +398,6 @@ class ScreenLineMB32Controller extends IPSModule
         }
 
         $isFahrtAktiv = ($remSoft > 0.0 || $remSlat > 0.0 || (!$isAtEndstop && !$isSlatOnly && abs($current - $target) > 0.5));
-
         if (!$isFahrtAktiv && (abs($current - $lastLoggedPos) < 0.01 || $isOverrunPhaseActive || $isSlatOnly)) {
             $staticDuration += $elapsed;
         } else {
@@ -428,10 +407,11 @@ class ScreenLineMB32Controller extends IPSModule
         $this->WriteAttributeFloat('LastLoggedPosition', $current);
         $this->WriteAttributeFloat('StaticPositionDuration', $staticDuration);
 
+        // Intelligenter Ruhezustand (Standby) nach exakt 5s kalkuliertem Stillstand
         if ($staticDuration >= 5.0) {
+            $relay = new RelayEngine($this, $relayUp, $relayDown, $this->ReadPropertyInteger('SwitchPause'));
             $relay->Stop(); 
             $this->SetTimerInterval('MovementTimer', 0);
-            $this->WriteAttributeBoolean('SafetyRunning', false);
             $this->WriteAttributeInteger('CurrentDirection', 0);
             $this->WriteAttributeInteger('ShakeFreeStep', 0);
             
@@ -447,34 +427,19 @@ class ScreenLineMB32Controller extends IPSModule
                 $this->WriteAttributeFloat('CurrentSlatPosition', 0.0);
                 $this->SetValue('Position', 0);
                 $this->SetValue('SlatPosition', 0);
-                $this->SetValue('Status', 'Standby: Anschlag Oben (0%)');
+                $this->SetValue('Status', 'Standby: Oben (0%)');
             } else {
                 $this->SetValue('Status', 'Standby: Position erreicht');
             }
             return;
         }
 
-        if ($remSoft > 0.0) {
-            $this->SetValue('Status', 'Sanftanlauf...');
-        } elseif ($remSlat > 0.0) {
-            $this->SetValue('Status', 'Lamellenwendung...');
-        } elseif ($overrun > 0.0 && !$isSlatOnly) {
-            $this->SetValue('Status', 'Nachlauf aktiv...');
-        } else {
-            $this->SetValue('Status', 'Fahrt läuft');
-        }
+        if ($remSoft > 0.0) $this->SetValue('Status', 'Sanftanlauf...');
+        elseif ($remSlat > 0.0) $this->SetValue('Status', 'Lamellenwendung...');
+        elseif ($overrun > 0.0 && !$isSlatOnly) $this->SetValue('Status', 'Nachlauf aktiv...');
+        else $this->SetValue('Status', 'Fahrt läuft');
 
-        // Zielprüfung für Behangfahrt ODER Beendigung der reinen Lamellenfahrt
-        $isTargetReached = false;
-        if ($isSlatOnly) {
-            if ($remSlat <= 0.0 && $remSoft <= 0.0) {
-                $isTargetReached = true;
-            }
-        } else {
-            if ((abs($current - $target) <= 0.5 && $overrun <= 0.0) || ($direction === TrackingEngine::DIRECTION_UP && $current <= 0.0 && $overrun <= 0.0) || ($direction === TrackingEngine::DIRECTION_DOWN && $current >= 100.0 && $overrun <= 0.0)) {
-                $isTargetReached = true;
-            }
-        }
+        $isTargetReached = $isSlatOnly ? ($remSlat <= 0.0 && $remSoft <= 0.0) : ((abs($current - $target) <= 0.5 && $overrun <= 0.0) || ($direction === TrackingEngine::DIRECTION_UP && $current <= 0.0 && $overrun <= 0.0) || ($direction === TrackingEngine::DIRECTION_DOWN && $current >= 100.0 && $overrun <= 0.0));
 
         if ($isTargetReached) {
             if ($this->ReadPropertyBoolean('IntermediateShakeEnabled') && !$isAtEndstop && !$isSlatOnly) {
@@ -482,8 +447,8 @@ class ScreenLineMB32Controller extends IPSModule
                 return;
             }
 
+            $relay = new RelayEngine($this, $relayUp, $relayDown, $this->ReadPropertyInteger('SwitchPause'));
             $relay->Stop();
-            $this->WriteAttributeBoolean('SafetyRunning', false);
             
             if ($isSlatOnly) {
                 $this->WriteAttributeFloat('CurrentSlatPosition', $targetSlat);
@@ -508,16 +473,13 @@ class ScreenLineMB32Controller extends IPSModule
                     $finalSlat = ($direction === TrackingEngine::DIRECTION_DOWN) ? 100.0 : 0.0;
                     $this->WriteAttributeFloat('CurrentSlatPosition', $finalSlat);
                     $this->SetValue('SlatPosition', (int)$finalSlat);
-                    
                     $this->SetTimerInterval('MovementTimer', 0);
                     $this->WriteAttributeInteger('CurrentDirection', 0);
                     $this->SetValue('Status', 'Position erreicht');
                 }
 
                 $coldStep = $this->ReadAttributeInteger('ShakeFreeStep');
-                if ($target === 100.0 && $coldStep > 0) {
-                    $this->AdvanceShakeFreeSequence(100.0); 
-                }
+                if ($target === 100.0 && $coldStep > 0) $this->AdvanceShakeFreeSequence(100.0); 
             }
         }
     }
@@ -526,7 +488,6 @@ class ScreenLineMB32Controller extends IPSModule
     {
         $currentStep = $this->ReadAttributeInteger('ShakeFreeStep');
         $nextStep = $currentStep + 1;
-
         $shake = new ShakeFree($this, $this->ReadPropertyBoolean('ShakeFreeEnabled'), $this->ReadPropertyFloat('ShakeFreeDuration'));
         $nextTarget = $shake->GetNextSequenceTarget($nextStep, $finalTarget);
 

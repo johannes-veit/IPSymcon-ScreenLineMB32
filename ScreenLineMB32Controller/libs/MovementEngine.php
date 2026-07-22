@@ -9,7 +9,6 @@ final class MovementEngine
     private float $startPosition = 0.0;
     private float $targetPosition = 0.0;
     private float $runtime = 0.0;
-    private float $travelDistance = 0.0;
     private bool $running = false;
     private bool $movingDown = false;
 
@@ -28,7 +27,6 @@ final class MovementEngine
         $this->startPosition = $current;
         $this->targetPosition = $target;
         $this->runtime = max(0.1, $runtime);
-        $this->travelDistance = abs($target - $current);
         $this->movingDown = ($target > $current || ($current === 100.0 && $target === 100.0));
 
         if ($this->movingDown) {
@@ -46,7 +44,7 @@ final class MovementEngine
         IPS_SendDebug(
             $this->module->GetModuleInstanceID(),
             'MovementEngine',
-            sprintf('Start %.1f -> %.1f (%.1fs inkl. Trägheiten/Nachlauf)', $current, $target, $runtime),
+            sprintf('Start %.1f -> %.1f (%.1fs)', $current, $target, $runtime),
             0
         );
 
@@ -63,25 +61,5 @@ final class MovementEngine
     public function IsRunning(): bool
     {
         return $this->running;
-    }
-
-    public function IsMovingDown(): bool
-    {
-        return $this->movingDown;
-    }
-
-    public function GetRuntime(): float
-    {
-        return $this->runtime;
-    }
-
-    public function GetTarget(): float
-    {
-        return $this->targetPosition;
-    }
-
-    public function GetStart(): float
-    {
-        return $this->startPosition;
     }
 }
