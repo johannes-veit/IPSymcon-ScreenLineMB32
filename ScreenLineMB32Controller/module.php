@@ -242,5 +242,9 @@ class ScreenLineMB32Controller extends IPSModule
         $this->SetValue('Position', 0);
         $this->SetValue('Status', 'Referenz geschlossen gespeichert');
     }
+    public function GetModuleInstanceID(): int
+    {
+        return $this->InstanceID;
+    }
 }
 
