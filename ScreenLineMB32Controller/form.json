@@ -62,7 +62,7 @@
                     "name": "SoftStartTime",
                     "caption": "Sanftanlaufzeit (bei jedem Fahrtantritt)",
                     "minimum": 0.0,
-                    "maximum": 5.0,
+                    "maximum": 10.0,
                     "digits": 1,
                     "suffix": " Sek."
                 }
