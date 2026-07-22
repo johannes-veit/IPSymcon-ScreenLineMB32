@@ -17,7 +17,8 @@ final class RelayEngine
         int $switchPause = 400
     ) {
         $this->module = $module;
-        $this->lcn = new LCNAdapter($module);
+        // KORREKTUR: Übergabe der numerischen ID direkt per Methode an den Adapter
+        $this->lcn = new LCNAdapter($module->GetModuleInstanceID());
         $this->relayUp = $relayUp;
         $this->relayDown = $relayDown;
         $this->switchPause = $switchPause;
@@ -32,7 +33,6 @@ final class RelayEngine
         $this->Stop();
 
         if ($this->switchPause > 0) {
-            $this->module->SendDebug('RelayEngine', sprintf('Warte Umschaltpause: %d ms', $this->switchPause), 0);
             IPS_Sleep($this->switchPause);
         }
 
@@ -48,7 +48,6 @@ final class RelayEngine
         $this->Stop();
 
         if ($this->switchPause > 0) {
-            $this->module->SendDebug('RelayEngine', sprintf('Warte Umschaltpause: %d ms', $this->switchPause), 0);
             IPS_Sleep($this->switchPause);
         }
 
