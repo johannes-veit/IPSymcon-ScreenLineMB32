@@ -6,9 +6,6 @@
     "version": "1.0.0",
     "build": 0,
     "date": 1718841600,
-    "compatibility": {
-        "version": 9
-    },
     "modules": [
         {
             "id": "{B1C3D5E7-F9A1-2345-6789-BCDE87654321}",
@@ -19,7 +16,8 @@
             "parentRequirements": [],
             "childRequirements": [],
             "implemented": [],
-            "directory": ""
+            "directory": "",
+            "compatibility": 24120000
         }
     ]
 }
