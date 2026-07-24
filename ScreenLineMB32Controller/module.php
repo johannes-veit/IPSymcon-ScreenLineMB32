@@ -34,7 +34,7 @@ class ScreenLineMB32Controller extends IPSModule
         $this->RegisterVariableInteger('Position', 'Position', '~Intensity.100', 10);
         $this->EnableAction('Position');
 
-        // FIX: Führendes Prozentzeichen im Variablenprofil korrigiert ("" statt '%')
+        // FIX: Führendes Prozentzeichen im Variablenprofil eliminiert ("" statt '%')
         if (!IPS_VariableProfileExists('SlatPosition')) {
             IPS_CreateVariableProfile('SlatPosition', 1);
             IPS_SetVariableProfileValues('SlatPosition', 0, 100, 1);
@@ -72,8 +72,8 @@ class ScreenLineMB32Controller extends IPSModule
         $this->RegisterAttributeFloat('IntermediateShakeRemaining', 0.0);
         $this->RegisterAttributeInteger('OriginalDirection', 0);
 
-        // Timer-Aufruf registrieren
-        $this->RegisterTimer('MovementTimer', 0, 'IPS_RequestAction($_IPS[\'TARGET\'], "UpdateMovement", 0);');
+        // FIX: Direkter nativer Methodenaufruf umgeht die RequestAction-Blockade im Symcon-Kern vollständig
+        $this->RegisterTimer('MovementTimer', 0, 'SLMB32_UpdateMovement($_IPS[\'TARGET\']);');
     }
 
     public function ApplyChanges(): void
@@ -382,7 +382,7 @@ class ScreenLineMB32Controller extends IPSModule
                 $newPos = $current;
                 $newSlat = min(100.0, max(0.0, $currentSlat));
             } else {
-                // FIX: Aktualisiert nun stabil die persistenten Restzeit-Zustände aus dem Objekt
+                // FIX: Holt nun die heruntergezählten Werte aus dem rehydrierten Tracking-Objekt zurück
                 $tracking->Move($direction);
                 $newPos = $tracking->GetPosition();
                 $newSlat = $tracking->GetSlatPosition();
@@ -411,6 +411,7 @@ class ScreenLineMB32Controller extends IPSModule
         $this->WriteAttributeFloat('LastLoggedPosition', $current);
         $this->WriteAttributeFloat('StaticPositionDuration', $staticDuration);
 
+        // Intelligenter Ruhezustand (Standby) nach exakt 5s kalkuliertem Stillstand
         if ($staticDuration >= 5.0) {
             $relay = new RelayEngine($this, $relayUp, $relayDown, $this->ReadPropertyInteger('SwitchPause'));
             $relay->Stop(); 
@@ -454,7 +455,7 @@ class ScreenLineMB32Controller extends IPSModule
             $relay->Stop();
             
             if ($isSlatOnly) {
-                $this->WriteAttributeFloat('CurrentSlatPosition', $targetSlat);
+                $this->WriteAttributeFloat('CurrentSlatPosition', $targetSpat);
                 $this->SetValue('SlatPosition', (int)$targetSlat);
                 $this->SetTimerInterval('MovementTimer', 0);
                 $this->WriteAttributeInteger('CurrentDirection', 0);
