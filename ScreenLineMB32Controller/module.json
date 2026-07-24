@@ -1,15 +1,13 @@
 {
-    "id": "{7A4C9E11-3B8D-4E6A-9F12-5D8C3A71B620}",
+    "id": "{B1C3D5E7-F9A1-2345-6789-BCDE87654321}",
     "name": "ScreenLineMB32Controller",
     "type": 3,
-    "vendor": "ScreenLine",
+    "vendor": "LCN",
     "aliases": [
         "ScreenLine MB32 Controller"
     ],
     "parentRequirements": [],
     "childRequirements": [],
-    "implemented": [
-        "{D3304400-D330-4400-D330-4400D3304400}"
-    ],
-    "prefix": "SLMB32"
+    "implemented": [],
+    "directory": ""
 }

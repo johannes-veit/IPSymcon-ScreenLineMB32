@@ -53,7 +53,7 @@
                     "name": "SlatTurnTime",
                     "caption": "Lamellenwendezeit bei Richtungswechsel",
                     "minimum": 0.0,
-                    "maximum": 10.0,
+                    "maximum": 15.0,
                     "digits": 1,
                     "suffix": " Sek."
                 },
@@ -62,7 +62,7 @@
                     "name": "SoftStartTime",
                     "caption": "Sanftanlaufzeit (bei jedem Fahrtantritt)",
                     "minimum": 0.0,
-                    "maximum": 10.0,
+                    "maximum": 15.0,
                     "digits": 1,
                     "suffix": " Sek."
                 }

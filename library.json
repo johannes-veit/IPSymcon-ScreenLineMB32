@@ -1,12 +1,25 @@
 {
-    "id": "{E3F2A1B4-8D3C-4F61-BF72-91A4C7D5E810}",
-    "name": "ScreenLineMB32",
+    "id": "{A0B2C4D6-E8F0-1234-5678-ABCD98765432}",
+    "title": "ScreenLine MB32 Controller",
     "author": "Johannes Veit",
-    "url": "https://github.com/johannes-veit/IPSymcon-ScreenLineMB32",
+    "name": "ScreenLineMB32",
+    "version": "1.0.0",
+    "build": 0,
+    "date": 1718841600,
     "compatibility": {
-        "version": "5.0"
+        "version": "9.0"
     },
-    "version": "1.0",
-    "build": 1,
-    "date": 1784652000
+    "modules": [
+        {
+            "id": "{B1C3D5E7-F9A1-2345-6789-BCDE87654321}",
+            "name": "ScreenLineMB32Controller",
+            "type": 3,
+            "vendor": "LCN",
+            "aliases": ["SLMB32"],
+            "parentRequirements": [],
+            "childRequirements": [],
+            "implemented": [],
+            "directory": ""
+        }
+    ]
 }
