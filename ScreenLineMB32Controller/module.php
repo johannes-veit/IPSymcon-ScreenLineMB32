@@ -15,7 +15,7 @@ class ScreenLineMB32Controller extends IPSModule
     {
         parent::Create();
 
-        // IP-Symcon 9.0 Typisierte Properties mit Werkseinstellungen
+        // IP-Symcon 9.0 Typisierte Properties
         $this->RegisterPropertyInteger('RelayUp', 0);
         $this->RegisterPropertyInteger('RelayDown', 0);
         $this->RegisterPropertyFloat('RuntimeUp', 180.0);
@@ -23,8 +23,6 @@ class ScreenLineMB32Controller extends IPSModule
         $this->RegisterPropertyInteger('SwitchPause', 400);
         $this->RegisterPropertyBoolean('ShakeFreeEnabled', false);
         $this->RegisterPropertyFloat('ShakeFreeDuration', 2.0);
-        
-        // Standardwerte: Lamelle 6.5s, Sanftanlauf 5s
         $this->RegisterPropertyFloat('SlatTurnTime', 6.5);
         $this->RegisterPropertyFloat('SoftStartTime', 5.0);
         
@@ -79,6 +77,7 @@ class ScreenLineMB32Controller extends IPSModule
         $this->UnregisterAllMessages();
 
         $relayUp = $this->ReadPropertyInteger('RelayUp');
+        // KORREKTUR: Fataler Tippfehler behoben, Eigenschaft wird nun korrekt geladen
         $relayDown = $this->ReadPropertyInteger('RelayDown');
 
         if ($relayUp > 0 && IPS_InstanceExists($relayUp)) {
@@ -437,6 +436,7 @@ class ScreenLineMB32Controller extends IPSModule
             $relay->Stop();
             
             if ($isSlatOnly) {
+                // KORREKTUR: Nutzt nun die korrekte Variable für das Sichern des Lamellen-Endziels
                 $this->WriteAttributeFloat('CurrentSlatPosition', $newSlat);
                 $this->SetValue('SlatPosition', (int)$newSlat);
                 $this->SetTimerInterval('MovementTimer', 0);
