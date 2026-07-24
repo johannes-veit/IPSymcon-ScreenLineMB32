@@ -34,11 +34,13 @@ class ScreenLineMB32Controller extends IPSModule
         $this->RegisterVariableInteger('Position', 'Position', '~Intensity.100', 10);
         $this->EnableAction('Position');
 
-        // Profil absichern ohne Tilde
+        // FIX: Führendes Prozentzeichen im Variablenprofil korrigiert ("" statt '%')
         if (!IPS_VariableProfileExists('SlatPosition')) {
             IPS_CreateVariableProfile('SlatPosition', 1);
             IPS_SetVariableProfileValues('SlatPosition', 0, 100, 1);
-            IPS_SetVariableProfileText('SlatPosition', '%', ' %');
+            IPS_SetVariableProfileText('SlatPosition', '', ' %');
+        } else {
+            IPS_SetVariableProfileText('SlatPosition', '', ' %');
         }
 
         $this->RegisterVariableInteger('SlatPosition', 'Lamelle', 'SlatPosition', 15);
@@ -380,9 +382,12 @@ class ScreenLineMB32Controller extends IPSModule
                 $newPos = $current;
                 $newSlat = min(100.0, max(0.0, $currentSlat));
             } else {
+                // FIX: Aktualisiert nun stabil die persistenten Restzeit-Zustände aus dem Objekt
                 $tracking->Move($direction);
                 $newPos = $tracking->GetPosition();
                 $newSlat = $tracking->GetSlatPosition();
+                $remSlat = $tracking->GetRemainingSlatTime();
+                $remSoft = $tracking->GetRemainingSoftStartTime();
             }
             
             $this->WriteAttributeFloat('CurrentPosition', $newPos);
@@ -406,7 +411,6 @@ class ScreenLineMB32Controller extends IPSModule
         $this->WriteAttributeFloat('LastLoggedPosition', $current);
         $this->WriteAttributeFloat('StaticPositionDuration', $staticDuration);
 
-        // Intelligenter Ruhezustand (Standby) nach exakt 5s kalkuliertem Stillstand
         if ($staticDuration >= 5.0) {
             $relay = new RelayEngine($this, $relayUp, $relayDown, $this->ReadPropertyInteger('SwitchPause'));
             $relay->Stop(); 

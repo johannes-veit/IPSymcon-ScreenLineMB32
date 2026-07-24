@@ -66,17 +66,19 @@ final class TrackingEngine
         $elapsed = $now - $this->lastTimestamp;
         $this->lastTimestamp = $now;
 
+        // 1. Sanftanlauf abbauen
         if ($this->remainingSoftStartTime > 0.0) {
             if ($elapsed >= $this->remainingSoftStartTime) {
                 $elapsed -= $this->remainingSoftStartTime;
                 $this->remainingSoftStartTime = 0.0;
             } else {
                 $this->remainingSoftStartTime -= $elapsed;
-                return; 
+                $elapsed = 0.0;
             }
         }
 
-        if ($this->remainingSlatTime > 0.0) {
+        // 2. Lamellenwendung berechnen
+        if ($elapsed > 0.0 && $this->remainingSlatTime > 0.0) {
             $allocatedTime = min($elapsed, $this->remainingSlatTime);
             $this->remainingSlatTime -= $allocatedTime;
             $elapsed -= $allocatedTime;
@@ -92,6 +94,7 @@ final class TrackingEngine
             $this->slatPosition = $this->Clamp($this->slatPosition);
         }
 
+        // 3. Physische Behangfahrt
         if ($elapsed > 0.0) {
             if ($this->startPositionForAutoRef < 0.0) {
                 $this->startPositionForAutoRef = $this->position;
@@ -118,7 +121,7 @@ final class TrackingEngine
         IPS_SendDebug(
             $this->module->GetModuleInstanceID(),
             'TrackingEngine',
-            sprintf('Fahrt aktiv | Pos=%.1f%% | Lamelle=%.1f%%', $this->position, $this->slatPosition),
+            sprintf('Fahrt aktiv | Pos=%.1f%% | Lamelle=%.1f%% | RemSoft=%.1fs | RemSlat=%.1fs', $this->position, $this->slatPosition, $this->remainingSoftStartTime, $this->remainingSlatTime),
             0
         );
     }
