@@ -1,5 +1,5 @@
 {
-    "id": "a0b2c4d6-e8f0-1234-5678-abcd98765432",
+    "id": "e63b8271-419a-4c28-981f-7b705e463aef",
     "title": "ScreenLine MB32 Controller",
     "author": "Johannes Veit",
     "name": "ScreenLineMB32",
@@ -11,7 +11,7 @@
     },
     "modules": [
         {
-            "id": "b1c3d5e7-f9a1-2345-6789-bcde87654321",
+            "id": "f29ca13c-738d-4cb5-ba6e-39824f8d22bb",
             "name": "ScreenLineMB32Controller",
             "type": 3,
             "vendor": "LCN",
