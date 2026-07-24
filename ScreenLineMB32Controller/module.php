@@ -23,6 +23,8 @@ class ScreenLineMB32Controller extends IPSModule
         $this->RegisterPropertyInteger('SwitchPause', 400);
         $this->RegisterPropertyBoolean('ShakeFreeEnabled', false);
         $this->RegisterPropertyFloat('ShakeFreeDuration', 2.0);
+        
+        // Standardwerte wie gewünscht: Lamelle 6.5s, Sanftanlauf 5.0s
         $this->RegisterPropertyFloat('SlatTurnTime', 6.5);
         $this->RegisterPropertyFloat('SoftStartTime', 5.0);
         
@@ -77,7 +79,7 @@ class ScreenLineMB32Controller extends IPSModule
         $this->UnregisterAllMessages();
 
         $relayUp = $this->ReadPropertyInteger('RelayUp');
-        // KORREKTUR: Fataler Tippfehler behoben, Eigenschaft wird nun korrekt geladen
+        // REPARIERT: Richtiger Variablenname verhindert den PHP-Absturz beim Einlesen
         $relayDown = $this->ReadPropertyInteger('RelayDown');
 
         if ($relayUp > 0 && IPS_InstanceExists($relayUp)) {
@@ -436,7 +438,7 @@ class ScreenLineMB32Controller extends IPSModule
             $relay->Stop();
             
             if ($isSlatOnly) {
-                // KORREKTUR: Nutzt nun die korrekte Variable für das Sichern des Lamellen-Endziels
+                // KORREKTUR: Nutzt nun die gültige Variable $newSlat statt der undefinierten $targetSlat variable
                 $this->WriteAttributeFloat('CurrentSlatPosition', $newSlat);
                 $this->SetValue('SlatPosition', (int)$newSlat);
                 $this->SetTimerInterval('MovementTimer', 0);

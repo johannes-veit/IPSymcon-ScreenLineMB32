@@ -66,7 +66,6 @@ final class TrackingEngine
         $elapsed = $now - $this->lastTimestamp;
         $this->lastTimestamp = $now;
 
-        // 1. Sanftanlauf abbauen
         if ($this->remainingSoftStartTime > 0.0) {
             if ($elapsed >= $this->remainingSoftStartTime) {
                 $elapsed -= $this->remainingSoftStartTime;
@@ -77,7 +76,6 @@ final class TrackingEngine
             }
         }
 
-        // 2. Lamellenwendung berechnen
         if ($elapsed > 0.0 && $this->remainingSlatTime > 0.0) {
             $allocatedTime = min($elapsed, $this->remainingSlatTime);
             $this->remainingSlatTime -= $allocatedTime;
@@ -94,7 +92,6 @@ final class TrackingEngine
             $this->slatPosition = $this->Clamp($this->slatPosition);
         }
 
-        // 3. Physische Behangfahrt
         if ($elapsed > 0.0) {
             if ($this->startPositionForAutoRef < 0.0) {
                 $this->startPositionForAutoRef = $this->position;
