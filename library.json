@@ -1,5 +1,5 @@
 {
-    "id": "a0b2c4d6-e8f0-1234-5678-abcd98765432",
+    "id": "{A0B2C4D6-E8F0-1234-5678-ABCD98765432}",
     "title": "ScreenLine MB32 Controller",
     "author": "Johannes Veit",
     "name": "ScreenLineMB32",
@@ -7,11 +7,11 @@
     "build": 0,
     "date": 1718841600,
     "compatibility": {
-        "version": "9.0"
+        "version": 9
     },
     "modules": [
         {
-            "id": "b1c3d5e7-f9a1-2345-6789-bcde87654321",
+            "id": "{B1C3D5E7-F9A1-2345-6789-BCDE87654321}",
             "name": "ScreenLineMB32Controller",
             "type": 3,
             "vendor": "LCN",
